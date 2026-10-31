@@ -1,0 +1,1765 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Shot Lab</title>
+<meta name="description" content="Shot-by-shot strokes gained tracker for competitive golf.">
+<meta name="theme-color" content="#0d4a31">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Shot Lab">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<style>
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:500;font-display:swap;src:url(fonts/barlow-condensed-latin-500-normal.woff2) format('woff2')}
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:600;font-display:swap;src:url(fonts/barlow-condensed-latin-600-normal.woff2) format('woff2')}
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:700;font-display:swap;src:url(fonts/barlow-condensed-latin-700-normal.woff2) format('woff2')}
+@font-face{font-family:'Public Sans';font-style:normal;font-weight:100 900;font-display:swap;src:url(fonts/public-sans-latin-wght-normal.woff2) format('woff2')}
+img{max-width:100%}[hidden]{display:none!important}
+/* Layout: a leaderboard-green board across the top, one working column for on-course entry, two-column stat boards on wider screens */
+:root{
+  --paper:#f3f5ef;--card:#ffffff;--card2:#eef2ea;--ink:#13201a;--mute:#56645b;--dim:#8b978f;--line:#dbe2d8;--line2:#c4cec2;
+  --board:#0d4a31;--board2:#0a3b27;--board-ink:#f2f6ee;--board-mute:#a9c4b3;
+  --gain:#17773f;--gain-soft:rgba(23,119,63,.12);--loss:#c0392b;--loss-soft:rgba(192,57,43,.11);
+  --under:#c8102e;--flag:#e2a900;--base:#2a6aa8;--base-soft:rgba(42,106,168,.12);
+  --rough:#cfe0c3;--fair:#a9d18e;--greenc:#79bf6a;--sand:#ead9a6;--water:#9cc7e6;--tee:#8dc47b;
+  --display:'Barlow Condensed','Arial Narrow',Impact,sans-serif;
+  --body:'Public Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]):not([data-theme="sun"]){
+  --paper:#0b120e;--card:#131c17;--card2:#19241e;--ink:#e5ece6;--mute:#97a69c;--dim:#66746b;--line:#25312a;--line2:#33433a;
+  --board:#0e3b27;--board2:#0a2c1d;--board-ink:#eef4ec;--board-mute:#8fb39d;
+  --gain:#5cc285;--gain-soft:rgba(92,194,133,.14);--loss:#f2735c;--loss-soft:rgba(242,115,92,.13);
+  --under:#ff5b70;--flag:#f2c230;--base:#72aee6;--base-soft:rgba(114,174,230,.14);
+  --rough:#1d3324;--fair:#2c5234;--greenc:#3d7a43;--sand:#6b6045;--water:#2b4b63;--tee:#356b3d;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#0b120e;--card:#131c17;--card2:#19241e;--ink:#e5ece6;--mute:#97a69c;--dim:#66746b;--line:#25312a;--line2:#33433a;
+  --board:#0e3b27;--board2:#0a2c1d;--board-ink:#eef4ec;--board-mute:#8fb39d;
+  --gain:#5cc285;--gain-soft:rgba(92,194,133,.14);--loss:#f2735c;--loss-soft:rgba(242,115,92,.13);
+  --under:#ff5b70;--flag:#f2c230;--base:#72aee6;--base-soft:rgba(114,174,230,.14);
+  --rough:#1d3324;--fair:#2c5234;--greenc:#3d7a43;--sand:#6b6045;--water:#2b4b63;--tee:#356b3d;color-scheme:dark}
+/* Sunlight: maximum contrast for reading on the course */
+:root[data-theme="sun"]{
+  --paper:#ffffff;--card:#ffffff;--card2:#f1f3f0;--ink:#000000;--mute:#222a25;--dim:#4a554e;--line:#9aa59e;--line2:#5d6a62;
+  --board:#003d22;--board2:#002a17;--board-ink:#ffffff;--board-mute:#d6e8dc;
+  --gain:#006b2c;--gain-soft:rgba(0,107,44,.14);--loss:#b3000c;--loss-soft:rgba(179,0,12,.12);
+  --under:#c4001f;--flag:#b88600;--base:#0049a3;--base-soft:rgba(0,73,163,.12);color-scheme:light}
+:root[data-theme="sun"] .chip,:root[data-theme="sun"] .btn,:root[data-theme="sun"] input,:root[data-theme="sun"] select{border-width:2px;font-weight:700}
+:root{color-scheme:light}
+*,*::before,*::after{box-sizing:border-box}
+html,body{background:var(--paper);color:var(--ink)}
+body{font:15px/1.45 var(--body);margin:0;-webkit-text-size-adjust:100%;padding-top:env(safe-area-inset-top,0px);-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:40;background:var(--board)}
+button,input,select,textarea{font:inherit;color:inherit}
+input,select,textarea{font-size:16px}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--flag);outline-offset:2px}
+h1,h2,h3{font-family:var(--display);font-weight:700;margin:0;letter-spacing:.02em;text-wrap:balance}
+h1{font-size:30px;line-height:1}h2{font-size:22px;line-height:1.1}
+h3{font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:var(--mute);font-family:var(--body);font-weight:700}
+.num,td,.tab{font-variant-numeric:tabular-nums}
+.mute{color:var(--mute)}.dim{color:var(--dim)}.small{font-size:13px}.tiny{font-size:11.5px}
+/* top board */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;background:var(--board);color:var(--board-ink);box-shadow:0 1px 0 var(--board2)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:14px;padding-block:6px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.brand{font-family:var(--display);font-weight:700;font-size:21px;letter-spacing:.12em;white-space:nowrap;display:flex;align-items:center;gap:8px}
+.brand svg{flex:none}
+nav.tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;flex:1;min-width:0}
+nav.tabs::-webkit-scrollbar{display:none}
+nav.tabs a{flex:none;color:var(--board-mute);text-decoration:none;font-family:var(--display);font-weight:600;font-size:17px;letter-spacing:.04em;text-transform:uppercase;padding:10px 11px;min-height:44px;display:flex;align-items:center;border-bottom:3px solid transparent}
+nav.tabs a[aria-current=page]{color:var(--board-ink);border-bottom-color:var(--flag)}
+.sync{font-size:11.5px;color:var(--board-mute);white-space:nowrap;display:flex;align-items:center;gap:6px}
+.sync i{width:8px;height:8px;border-radius:50%;background:var(--board-mute);display:inline-block}
+.sync.ok i{background:#7be0a0}.sync.busy i{background:var(--flag)}.sync.off i{background:#ff9b8a}
+main{max-width:1180px;margin:0 auto;padding-block:16px 120px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+/* building blocks */
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;min-width:0}
+.card>h3{margin-bottom:10px}
+.why{color:var(--mute);font-size:13px;margin:10px 0 0;padding-top:8px;border-top:1px dashed var(--line2)}
+.why b{color:var(--ink);font-weight:600}
+.grid{display:grid;gap:12px}
+.cols{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));align-items:start}
+.cols2{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(100%,480px),1fr));align-items:start}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.between{justify-content:space-between}
+.pagehead{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin:2px 0 14px}
+.pagehead p{margin:4px 0 0;color:var(--mute);max-width:70ch}
+.btn{min-height:46px;padding:0 16px;border-radius:10px;border:1px solid var(--line2);background:var(--card);font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;color:var(--ink)}
+.btn:hover{border-color:var(--mute)}
+.btn.pri{background:var(--board);color:var(--board-ink);border-color:var(--board)}
+.btn.warn{color:var(--loss);border-color:var(--loss)}
+.btn.sm{min-height:36px;padding:0 12px;font-size:13px;border-radius:8px}
+.btn.block{width:100%}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chips.scroll{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+.chip{flex:none;min-height:44px;min-width:44px;padding:0 12px;border-radius:9px;border:1px solid var(--line2);background:var(--card);font-weight:600;font-size:14px;display:inline-flex;align-items:center;justify-content:center;gap:6px;position:relative;line-height:1.1;text-align:center}
+.chip.sm{min-height:38px;font-size:13px;padding:0 10px}
+.chip[aria-pressed=true]{background:var(--board);color:var(--board-ink);border-color:var(--board)}
+.chip.need{border-color:var(--flag);box-shadow:0 0 0 2px color-mix(in srgb,var(--flag) 35%,transparent)}
+.chip.sugg::after{content:"";position:absolute;top:4px;right:4px;width:6px;height:6px;border-radius:50%;background:var(--flag)}
+.chip.bad[aria-pressed=true]{background:var(--loss);border-color:var(--loss);color:#fff}
+label.fld{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--mute);min-width:0}
+input[type=text],input[type=number],input[type=date],select,textarea{background:var(--card);border:1px solid var(--line2);border-radius:9px;padding:9px 10px;min-height:44px;width:100%;color:var(--ink)}
+textarea{min-height:64px;resize:vertical}
+.fgrid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+th{color:var(--mute);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.06em}
+td.n,th.n{text-align:right}
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.sg{font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.sg.pos{color:var(--gain)}.sg.neg{color:var(--loss)}.sg.zero{color:var(--mute)}
+.tag{display:inline-flex;align-items:center;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;padding:2px 7px;border-radius:99px;border:1px solid var(--line2);color:var(--mute);white-space:nowrap}
+.tag.act{background:var(--loss);border-color:var(--loss);color:#fff}
+.tag.watch{color:var(--flag);border-color:var(--flag)}
+.tag.ex{background:var(--flag);border-color:var(--flag);color:#1b1500}
+.kpis{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(128px,1fr))}
+.kpi{background:var(--card2);border-radius:10px;padding:10px 12px;min-width:0}
+.kpi .l{font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.08em;font-weight:600}
+.kpi .v{font-family:var(--display);font-size:28px;font-weight:700;line-height:1.05;font-variant-numeric:tabular-nums}
+.kpi .s{font-size:11.5px;color:var(--mute)}
+.empty{border:1px dashed var(--line2);border-radius:10px;padding:18px;text-align:center;color:var(--mute);font-size:13.5px}
+.empty b{display:block;color:var(--ink);margin-bottom:3px}
+.banner{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:color-mix(in srgb,var(--flag) 16%,var(--card));border:1px solid color-mix(in srgb,var(--flag) 55%,var(--line));border-radius:12px;padding:12px 14px;margin-bottom:14px}
+.subnav{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-bottom:14px;padding-bottom:2px}
+.subnav::-webkit-scrollbar{display:none}
+.subnav a{flex:none;text-decoration:none;color:var(--mute);border:1px solid var(--line2);border-radius:99px;padding:8px 14px;font-weight:600;font-size:13.5px;min-height:40px;display:flex;align-items:center;background:var(--card)}
+.subnav a[aria-current=page]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+svg.ch{width:100%;height:auto;display:block;overflow:visible}
+svg text{fill:var(--mute);font:500 11px var(--body)}
+svg .lbl{fill:var(--ink);font-weight:600}
+svg .gl{stroke:var(--line);stroke-width:1}
+/* scorecard symbols */
+.sc{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;font-weight:700;font-variant-numeric:tabular-nums;font-size:14px}
+.sc.b{border:1.5px solid var(--under);border-radius:50%;color:var(--under)}
+.sc.e{border:1.5px solid var(--under);border-radius:50%;color:var(--under);box-shadow:0 0 0 2px var(--card),0 0 0 3.5px var(--under)}
+.sc.bo{border:1.5px solid var(--ink)}
+.sc.d{border:1.5px solid var(--ink);box-shadow:0 0 0 2px var(--card),0 0 0 3.5px var(--ink)}
+.scard td,.scard th{text-align:center;padding:5px 3px;font-size:13px}
+.scard td:first-child,.scard th:first-child{text-align:left;padding-left:0}
+/* entry */
+.entry{max-width:640px;margin:0 auto}
+.holebar{position:sticky;top:calc(env(safe-area-inset-top,0px) + 56px);z-index:20;background:var(--board);color:var(--board-ink);border-radius:12px;padding:8px;display:flex;align-items:center;gap:6px;margin-bottom:10px}
+.holebar .hn{flex:1;text-align:center;min-width:0}
+.holebar .hn b{font-family:var(--display);font-size:24px;letter-spacing:.03em;display:block;line-height:1.05}
+.holebar .hn span{font-size:12.5px;color:var(--board-mute)}
+.holebar button{background:transparent;border:1px solid var(--board-mute);color:var(--board-ink);border-radius:9px;min-width:44px;min-height:44px;font-size:20px}
+.holebar button[disabled]{opacity:.3}
+.strip{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;margin-bottom:12px;padding:2px}
+.strip::-webkit-scrollbar{display:none}
+.strip button{flex:none;width:40px;border:1px solid var(--line2);background:var(--card);border-radius:8px;padding:3px 0;display:flex;flex-direction:column;align-items:center;gap:1px;font-size:10.5px;color:var(--mute)}
+.strip button[aria-current=true]{border-color:var(--board);box-shadow:0 0 0 2px var(--board)}
+.sec{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
+.sec>.lab{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.sec>.lab h3{margin:0}
+.sub{font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--mute);font-weight:700;margin:12px 0 6px}
+.distrow{display:flex;align-items:center;gap:6px}
+.distrow input{font-family:var(--display);font-size:34px;font-weight:700;text-align:center;min-height:58px;padding:2px 6px;flex:1;min-width:0}
+.distrow .unit{font-family:var(--display);font-size:18px;color:var(--mute);width:28px}
+.distrow .adj{min-width:44px;min-height:58px;border-radius:9px;border:1px solid var(--line2);background:var(--card2);font-weight:700}
+.compass{display:grid;grid-template-columns:repeat(3,48px);grid-template-rows:repeat(3,48px);gap:5px;flex:none}
+.compass button{border:1px solid var(--line2);background:var(--card);border-radius:9px;font-size:20px;font-weight:700;padding:0}
+.compass button[aria-pressed=true]{background:var(--board);color:var(--board-ink);border-color:var(--board)}
+.compass .calm{font-size:11px;font-weight:700;text-transform:uppercase}
+.windbox{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap}
+.windbox .side{flex:1;min-width:180px}
+.rgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;max-width:330px}
+.rgrid button{min-height:52px;border:1px solid var(--line2);background:var(--card);border-radius:9px;font-size:12.5px;font-weight:600;line-height:1.15;padding:4px}
+.rgrid button.ctr{background:var(--gain-soft)}
+.rgrid button[aria-pressed=true]{background:var(--board);color:var(--board-ink);border-color:var(--board)}
+.preview{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--card2);border-radius:10px;padding:10px 12px;margin-top:10px;font-size:13.5px}
+.actionbar{position:fixed;left:0;right:0;bottom:0;z-index:35;background:color-mix(in srgb,var(--paper) 92%,transparent);backdrop-filter:blur(8px);border-top:1px solid var(--line);padding-top:10px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px))}
+.actionbar .in{max-width:640px;margin:0 auto;display:grid;grid-template-columns:1fr 1.6fr;gap:10px}
+.actionbar .btn{min-height:56px;font-size:17px}
+details.more{border-top:1px solid var(--line);margin-top:12px;padding-top:4px}
+details.more>summary{cursor:pointer;list-style:none;font-weight:600;font-size:13.5px;min-height:40px;display:flex;align-items:center;justify-content:space-between;color:var(--mute)}
+details.more>summary::after{content:"+";font-size:18px}
+details.more[open]>summary::after{content:"−"}
+/* leaks */
+.leak{display:grid;grid-template-columns:28px 1fr auto;gap:10px;padding:12px 0;border-bottom:1px solid var(--line);align-items:start}
+.leak:last-child{border-bottom:0}
+.leak .rk{font-family:var(--display);font-size:24px;font-weight:700;color:var(--dim);text-align:center;line-height:1}
+.leak .tip{color:var(--mute);font-size:13px;margin-top:3px}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--mute);margin-top:6px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+/* sheet + toast */
+#sheet{position:fixed;inset:0;z-index:60;display:none;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.5)}
+#sheet.on{display:flex}
+#sheet .pn{background:var(--card);border-radius:18px 18px 0 0;width:min(640px,100%);max-height:90vh;overflow:auto;padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+@media(min-width:760px){#sheet{align-items:center}#sheet .pn{border-radius:18px}}
+#toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:70;background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:10px;font-weight:600;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw;text-align:center}
+#toast.on{opacity:1}
+#tip{position:fixed;z-index:80;pointer-events:none;background:var(--card);border:1px solid var(--line2);border-radius:8px;padding:7px 9px;font-size:12.5px;max-width:240px;box-shadow:0 6px 24px rgba(0,0,0,.25);opacity:0;white-space:pre-line;color:var(--ink)}
+#tip.on{opacity:1}
+.howto p,.howto li{color:var(--mute);max-width:72ch}
+.howto b{color:var(--ink)}
+.howto h2{margin:22px 0 6px}
+.formula{font-family:ui-monospace,Menlo,monospace;background:var(--card2);border-radius:8px;padding:8px 10px;display:inline-block;color:var(--ink)}
+/* v3 additions: entry mode switch, GPS row, update bar */
+.modebar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 10px}
+.seg{display:inline-flex;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px}
+.seg button{border:0;background:transparent;border-radius:8px;min-height:36px;padding:0 14px;font-weight:600;font-size:13.5px;color:var(--mute)}
+.seg button[aria-pressed=true]{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.gpsrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.btn.gps{border-color:var(--base);color:var(--base)}
+.updbar{position:sticky;top:calc(env(safe-area-inset-top,0px) + 56px);z-index:29;display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;background:var(--flag);color:#1b1500;font-weight:600;font-size:14px;padding:8px 16px}
+.updbar[hidden]{display:none!important}
+code{font-family:ui-monospace,Menlo,monospace;font-size:.9em;background:var(--card2);padding:1px 5px;border-radius:5px}
+nav.tabs .ni{display:none;width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+nav.tabs .ns{display:none}
+.top-in{min-height:56px}
+/* iPhone: the main tabs become a bottom tab bar */
+@media (max-width:759px){
+  nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:36;background:var(--board);display:grid;grid-template-columns:repeat(6,1fr);gap:0;overflow:visible;padding-bottom:env(safe-area-inset-bottom,0px);box-shadow:0 -1px 0 var(--board2);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+  nav.tabs a{flex-direction:column;justify-content:center;gap:2px;font-family:var(--body);font-size:10.5px;font-weight:600;letter-spacing:.01em;text-transform:none;padding:6px 0 5px;min-height:54px;border-bottom:0;border-top:3px solid transparent}
+  nav.tabs a[aria-current=page]{border-top-color:var(--flag)}
+  nav.tabs .ni{display:block}nav.tabs .nl{display:none}nav.tabs .ns{display:block}
+  .top-in{justify-content:space-between}
+  main{padding-bottom:calc(190px + env(safe-area-inset-bottom,0px))}
+  .actionbar{bottom:calc(57px + env(safe-area-inset-bottom,0px));padding-bottom:10px}
+  .actionbar .btn{min-height:50px}
+  #toast{bottom:calc(140px + env(safe-area-inset-bottom,0px))}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+@media(max-width:520px){h1{font-size:26px}.kpi .v{font-size:24px}.card{padding:12px}}
+</style>
+
+<header class="top"><div class="top-in">
+  <div class="brand"><svg width="18" height="22" viewBox="0 0 18 22" aria-hidden="true"><path d="M3 21V1" stroke="currentColor" stroke-width="2"/><path d="M3 2l12 4-12 4z" fill="var(--flag)"/></svg>SHOT LAB</div>
+  <nav class="tabs" aria-label="Main"><a href="#home"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z"/></svg><span class="nl">Home</span><span class="ns">Home</span></a><a href="#play"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 21V3"/><path d="M6 4l12 4-12 4z" fill="currentColor"/></svg><span class="nl">Play</span><span class="ns">Play</span></a><a href="#rounds"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><span class="nl">Rounds</span><span class="ns">Rounds</span></a><a href="#stats-overview"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span class="nl">Stats</span><span class="ns">Stats</span></a><a href="#log"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="18" r="1"/></svg><span class="nl">Shot log</span><span class="ns">Log</span></a><a href="#setup"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9 7 7M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg><span class="nl">Setup</span><span class="ns">Setup</span></a></nav>
+  <span class="sync" id="sync"><i></i><span>On this phone</span></span>
+</div></header>
+<div id="upd" class="updbar" hidden><span>A new version of Shot Lab is ready.</span><button class="btn sm pri" data-act="apply-update">Update now</button></div>
+<main id="view" tabindex="-1"></main>
+<div id="sheet" role="dialog" aria-modal="true"><div class="pn" id="sheetPn"></div></div>
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="tip" role="tooltip"></div>
+
+<script>
+'use strict';
+/* =====================================================================
+   SHOT LAB 2 — rounds only, button entry, PGA Tour-style strokes gained
+   ===================================================================== */
+
+/* ---- Expected strokes to hole out (estimates of published PGA Tour averages).
+   Yards for everything off the green, feet on the green. ---- */
+const T = {
+  tee:[[0,2.0],[20,2.4],[40,2.6],[60,2.7],[80,2.78],[100,2.86],[120,2.92],[140,2.97],[160,2.99],[180,3.05],[200,3.12],[220,3.17],[240,3.25],[260,3.45],[280,3.65],[300,3.71],[320,3.79],[340,3.86],[360,3.92],[380,3.96],[400,3.99],[420,4.02],[440,4.08],[460,4.17],[480,4.28],[500,4.41],[520,4.54],[540,4.65],[560,4.74],[580,4.79],[600,4.82]],
+  fairway:[[0,2.0],[5,2.1],[10,2.18],[20,2.4],[30,2.52],[40,2.6],[50,2.66],[60,2.7],[80,2.75],[100,2.8],[120,2.85],[140,2.91],[160,2.98],[180,3.08],[200,3.19],[220,3.32],[240,3.45],[260,3.58],[280,3.69],[300,3.78],[350,3.96],[400,4.11],[450,4.29],[500,4.48],[550,4.66],[600,4.82]],
+  rough:[[0,2.1],[5,2.25],[10,2.34],[20,2.59],[30,2.7],[40,2.78],[60,2.91],[80,2.96],[100,3.02],[120,3.08],[140,3.15],[160,3.23],[180,3.31],[200,3.42],[220,3.53],[240,3.64],[260,3.74],[280,3.83],[300,3.9],[350,4.05],[400,4.2],[450,4.37],[500,4.55],[550,4.7],[600,4.85]],
+  sand:[[0,2.2],[5,2.3],[10,2.43],[20,2.53],[30,2.66],[40,2.82],[60,3.15],[80,3.24],[100,3.23],[120,3.21],[140,3.22],[160,3.28],[180,3.4],[200,3.55],[220,3.7],[240,3.84],[260,3.93],[280,4.0],[300,4.04],[350,4.15],[400,4.3],[500,4.6],[600,4.9]],
+  recovery:[[0,2.6],[10,2.9],[20,3.0],[50,3.3],[100,3.8],[120,3.78],[140,3.8],[160,3.81],[180,3.82],[200,3.87],[220,3.92],[240,3.97],[260,4.03],[280,4.1],[300,4.2],[350,4.33],[400,4.45],[500,4.7],[600,4.95]],
+  green:[[0,1.0],[1,1.0],[2,1.01],[3,1.04],[4,1.13],[5,1.23],[6,1.34],[7,1.42],[8,1.5],[9,1.56],[10,1.61],[12,1.68],[15,1.78],[20,1.87],[25,1.93],[30,1.98],[40,2.06],[50,2.14],[60,2.21],[70,2.28],[80,2.34],[100,2.45]]
+};
+/* Tour reference numbers (approximate PGA Tour averages; estimates) */
+const TOUR_MAKE = [[1,1],[2,.99],[3,.96],[4,.88],[5,.77],[6,.66],[7,.58],[8,.5],[9,.45],[10,.4],[12,.32],[15,.23],[20,.15],[25,.1],[30,.07],[40,.04],[50,.025],[70,.015]];
+const TOUR_PROX_FW = [[30,12],[62,16],[87,18],[112,20.5],[137,23.5],[162,27.5],[187,33],[212,39],[237,46],[262,55],[290,68]];
+const TOUR_PROX_RGH = [[30,18],[62,24],[87,27],[112,30],[137,34],[162,40],[187,47],[212,55],[237,63],[262,72],[290,85]];
+const TOUR = { fir:.595, gir:.655, scr:.585, sand:.50, putts:29.0, puttsGir:1.77, onePutt:.40, threePutt:.03, birdie:.215, bogeyAv:.155, bounce:.21, p3:3.07, p4:4.04, p5:4.66, drive:300, score:71.0 };
+
+const LIES = [['tee','Tee'],['fairway','Fairway'],['first_cut','First cut'],['rough','Rough'],['deep_rough','Deep rough'],['fw_bunker','Fairway bunker'],['gs_bunker','Greenside bunker'],['recovery','Trees / recovery'],['fringe','Fringe'],['green','Green']];
+const LIE = Object.fromEntries(LIES);
+const QUAL = {
+  fairway:[['good','Clean'],['tight','Tight / bare'],['divot','In a divot']],
+  first_cut:[['good','Sitting up'],['down','Sitting down']],
+  rough:[['up','Sitting up'],['good','Average'],['down','Sitting down'],['flyer','Flyer lie']],
+  deep_rough:[['good','Can advance'],['down','Buried'],['hack','Hack out only']],
+  fw_bunker:[['good','Clean'],['down','Sitting down'],['lip','Lip in play']],
+  gs_bunker:[['good','Clean'],['plug','Plugged'],['down','Downslope'],['lip','Under the lip'],['firm','Firm sand']],
+  recovery:[['good','Clear swing'],['block','Restricted'],['punch','Punch out only']],
+  fringe:[['good','Clean'],['collar','Against the collar']], tee:[], green:[]
+};
+const QADJ = { fairway:{good:0,tight:.04,divot:.15}, first_cut:{good:0,down:.08}, rough:{up:-.05,good:0,down:.15,flyer:.06}, deep_rough:{good:0,down:.2,hack:.35},
+  fw_bunker:{good:0,down:.15,lip:.2}, gs_bunker:{good:0,plug:.35,down:.18,lip:.25,firm:.08}, recovery:{good:-.1,block:.1,punch:.25}, fringe:{good:0,collar:.08} };
+const SLOPES = [['flat','Flat'],['up','Uphill'],['down','Downhill'],['above','Ball above feet'],['below','Ball below feet']];
+const SLADJ = {flat:0,up:.02,down:.06,above:.03,below:.05};
+/* wind: where it comes FROM, relative to a player facing the target. Angle 0 = into the face. */
+const WIND = { H:{a:0,ar:'↓',l:'Into'}, HR:{a:45,ar:'↙',l:'Into, off the right'}, R:{a:90,ar:'←',l:'Right to left'}, TR:{a:135,ar:'↖',l:'Helping, off the right'},
+  T:{a:180,ar:'↑',l:'Helping'}, TL:{a:225,ar:'↗',l:'Helping, off the left'}, L:{a:270,ar:'→',l:'Left to right'}, HL:{a:315,ar:'↘',l:'Into, off the left'} };
+const WIND_POS = ['HL','H','HR','L','calm','R','TL','T','TR'];
+const WSPEEDS = [[3,'0–5'],[8,'5–10'],[13,'10–15'],[18,'15–20'],[24,'20+']];
+const AIM_TEE = [['center','Fairway center'],['left','Left side'],['right','Right side'],['layup','Lay back']];
+const AIM_APP = [['pin','At the pin'],['middle','Middle of green'],['left','Left of pin'],['right','Right of pin'],['short','Below the hole'],['layup','Lay up'],['out','Punch out']];
+const AIM_ARG = [['hole','Try to hole it'],['close','Land it close'],['safe','Safe / middle']];
+const SHAPES = [['draw','Draw'],['straight','Straight'],['fade','Fade']];
+const TRAJ = [['mid','Normal'],['high','High'],['low','Low']];
+const TYPES_FULL = [['full','Full'],['knock','Knockdown / ¾'],['punch','Punch'],['layup','Layup']];
+const TYPES_ARG = [['chip','Chip'],['pitch','Pitch'],['flop','Flop'],['bump','Bump and run'],['bunker','Bunker shot'],['putt','Putter']];
+const RES = [['LL','Long left'],['L0','Long'],['LR','Long right'],['ML','Left'],['C','On target'],['MR','Right'],['SL','Short left'],['S0','Short'],['SR','Short right']];
+const RESL = Object.fromEntries(RES);
+const ACT = [['asplan','As planned'],['draw','Draw'],['straight','Straight'],['fade','Fade'],['hook','Hook'],['slice','Slice'],['push','Push'],['pull','Pull']];
+const STRIKE = [['pure','Pure'],['thin','Thin'],['fat','Fat'],['toe','Toe'],['heel','Heel'],['top','Topped'],['sky','Skied'],['shank','Shank']];
+const PENS = [['ob','OB (re-hit)'],['lost','Lost ball'],['water','Water'],['unplay','Unplayable']];
+const BRK = [['straight','Straight'],['lr','Left to right'],['rl','Right to left'],['double','Double break']];
+const PSLOPE = [['up','Uphill'],['flat','Flat'],['down','Downhill']];
+const PMISS = [['short','Short'],['long','Long'],['high','High side'],['low','Low side'],['lip','Lipped out']];
+const ROUND_TYPES = [['tournament','Tournament'],['qualifier','Qualifier'],['casual','Casual'],['practice','Practice round']];
+const BAG_DEFAULT = [['Dr',295,318],['3W',268,285],['5W',248,262],['3H',236,248],['4i',222,232],['5i',210,219],['6i',198,206],['7i',185,192],['8i',171,177],['9i',158,163],['PW',145,149],['50',132,135],['54',114,116],['58',96,97],['Putter',0,0]];
+const CATS = ['OTT','APP','ARG','PUTT'];
+const CATL = {OTT:'Off the tee',APP:'Approach',ARG:'Around the green',PUTT:'Putting'};
+
+/* ---- utils ---- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fin = v => typeof v === 'number' && isFinite(v);
+const sum = a => a.reduce((s, v) => s + (fin(v) ? v : 0), 0);
+const mean = a => { const b = a.filter(fin); return b.length ? sum(b) / b.length : NaN; };
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const r1 = v => Math.round(v * 10) / 10;
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const today = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+const pct = v => fin(v) ? Math.round(v * 100) + '%' : '—';
+const MINUS = '−';
+const sgT = (v, d = 2) => { if (!fin(v)) return '—'; const a = Math.abs(v).toFixed(d); return +a === 0 ? (0).toFixed(d) : (v > 0 ? '+' : MINUS) + a; };
+const sgH = (v, d = 2) => fin(v) ? `<span class="sg ${Math.abs(v) < 5 * 10 ** -(d + 1) ? 'zero' : v > 0 ? 'pos' : 'neg'}">${sgT(v, d)}</span>` : '<span class="sg zero">—</span>';
+const toPar = n => n === 0 ? 'E' : (n > 0 ? '+' : MINUS) + Math.abs(n);
+const groupBy = (a, f) => { const m = new Map(); for (const x of a) { const k = f(x); if (!m.has(k)) m.set(k, []); m.get(k).push(x); } return m; };
+function I(t, x){ if (!fin(x)) return NaN; if (x <= t[0][0]) return t[0][1]; for (let i = 1; i < t.length; i++){ if (x <= t[i][0]){ const [a, b] = t[i - 1], [c, d] = t[i]; return b + (d - b) * (x - a) / (c - a); } } const [a, b] = t[t.length - 2], [c, d] = t[t.length - 1]; return d + (d - b) / (c - a) * (x - c); }
+function rng(seed){ let s = seed >>> 0 || 1; return () => { s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+const conf = n => n < 15 ? 'watch' : 'act';
+
+/* =====================================================================
+   Strokes gained engine (pure)
+   ===================================================================== */
+const isFt = lie => lie === 'green' || lie === 'fringe';
+const yd = (d, lie) => isFt(lie) ? d / 3 : d;
+/* Baseline: 'tour' (PGA Tour average) or 'scratch' (estimated scratch amateur, about 4.5 strokes a round behind Tour). */
+let BASE = 'tour';
+const SCR_LIE = { first_cut: 1.07, rough: 1.15, deep_rough: 1.2, fw_bunker: 1.2, gs_bunker: 1.25, recovery: 1.1 };
+function scrDelta(d, lie){
+  const pd = .06 * (1 - Math.exp(-d / 8));
+  if (lie === 'green') return pd;
+  if (lie === 'fringe') return Math.min(pd, .08);
+  return (.08 + .19 * (1 - Math.exp(-d / 160))) * (SCR_LIE[lie] || 1);
+}
+const baseName = () => BASE === 'scratch' ? 'a scratch golfer' : 'the PGA Tour';
+const baseShort = () => BASE === 'scratch' ? 'scratch' : 'Tour average';
+function E(d, lie){ const e = E0(d, lie); return BASE === 'scratch' && fin(e) ? e + scrDelta(Math.max(0, d), lie) : e; }
+function E0(d, lie){
+  if (!fin(d)) return NaN; d = Math.max(0, d);
+  switch (lie){
+    case 'green': return I(T.green, d);
+    case 'fringe': return Math.min(I(T.fairway, d / 3), I(T.green, d) + .12);
+    case 'tee': return I(T.tee, d);
+    case 'fairway': return I(T.fairway, d);
+    case 'first_cut': return (I(T.fairway, d) + I(T.rough, d)) / 2;
+    case 'rough': return I(T.rough, d);
+    case 'deep_rough': { const r = I(T.rough, d); return r + Math.max(.1, .35 * (I(T.recovery, d) - r)); }
+    case 'fw_bunker': case 'gs_bunker': return I(T.sand, d);
+    case 'recovery': return I(T.recovery, d);
+    default: return NaN;
+  }
+}
+/* Effective "plays like" distance for a full shot: wind and elevation. */
+function playsLike(s){
+  let d = s.d; if (!fin(d) || isFt(s.lie) || d <= 30) return d;
+  const w = WIND[s.wd];
+  if (w && fin(s.ws) && s.ws > 0){ const head = Math.cos(w.a * Math.PI / 180); d *= head > 0 ? 1 + .01 * s.ws * head : 1 + .005 * s.ws * head; }
+  if (fin(s.elev)) d += s.elev / 3;
+  return d;
+}
+/* Context-adjusted expected strokes: lie quality, stance, wind, elevation, putt break and slope. */
+function EA(s){
+  if (!s) return NaN;
+  if (s.lie === 'green'){
+    let e = E(s.d, 'green');
+    if (s.pslope === 'down') e += .04; else if (s.pslope === 'up') e -= .02;
+    if (s.brk === 'lr' || s.brk === 'rl') e += s.d >= 3 && s.d <= 20 ? .03 : .015; else if (s.brk === 'double') e += .06;
+    return e;
+  }
+  let e = E(playsLike(s), s.lie);
+  e += ((QADJ[s.lie] || {})[s.q] || 0) + (s.lie === 'tee' ? 0 : (SLADJ[s.sl] || 0));
+  const w = WIND[s.wd];
+  if (w && fin(s.ws) && s.d > 50 && !isFt(s.lie)) e += .004 * s.ws * Math.abs(Math.sin(w.a * Math.PI / 180));
+  return e;
+}
+function category(s, par){ if (s.lie === 'green') return 'PUTT'; if (s.lie === 'tee' && par >= 4) return 'OTT'; return yd(s.d, s.lie) > 30 ? 'APP' : 'ARG'; }
+function clubGroup(c){ if (!c) return null; if (c === 'Dr') return 'Driver'; if (/W$|H$/.test(c)) return 'Woods & hybrids'; if (['2i','3i','4i','5i'].includes(c)) return 'Long irons'; if (['6i','7i'].includes(c)) return 'Mid irons'; if (['8i','9i'].includes(c)) return 'Short irons'; if (c === 'Putter') return 'Putter'; return 'Wedges'; }
+const actualShape = s => s.act === 'asplan' ? (s.shape || 'straight') : s.act;
+const lateral = dir => dir ? (dir.endsWith('L') ? -1 : dir.endsWith('R') ? 1 : 0) : 0;
+function depthOf(dir){ if (!dir) return 0; if (dir === 'LL' || dir === 'L0' || dir === 'LR') return 1; if (dir === 'SL' || dir === 'S0' || dir === 'SR') return -1; return 0; }
+
+/* Analyse one round: flat shot rows + hole summaries. Pure. */
+function analyzeRound(r){
+  const rows = [], holes = [];
+  (r.holes || []).forEach((h, hi) => {
+    const sh = h.shots || [];
+    const par = h.par || 4;
+    const hs = { rid: r.id, hole: hi + 1, par, yards: h.yards, si: h.si, done: !!h.done && sh.length > 0, n: sh.length, rows: [] };
+    let strokes = 0, reached = null;
+    sh.forEach((s, i) => {
+      const nx = sh[i + 1], last = i === sh.length - 1, holed = last && h.done;
+      let eD = null, eLie = null;
+      if (nx){ eD = nx.d; eLie = nx.lie; } else if (holed){ eD = 0; eLie = 'hole'; } else if (s.e){ eD = s.e.d; eLie = s.e.lie; }
+      const pen = s.pen ? 1 : 0;
+      const es = E(s.d, s.lie), ee = eLie === 'hole' ? 0 : (eLie ? E(eD, eLie) : NaN);
+      const esA = EA(s), eeA = eLie === 'hole' ? 0 : nx ? EA(nx) : (eLie ? E(eD, eLie) : NaN);
+      const before = strokes; strokes += 1 + pen;
+      const row = { rid: r.id, date: r.date, rtype: r.type, course: r.course, hole: hi + 1, par, idx: i, n: i + 1, strokeNo: before + 1,
+        ...s, yd: yd(s.d, s.lie), cat: category(s, par), sg: es - ee - 1 - pen, sgA: esA - eeA - 1 - pen, es,
+        eD, eLie, eYd: eLie && eLie !== 'hole' ? yd(eD, eLie) : eLie === 'hole' ? 0 : null, holed: eLie === 'hole', pens: pen,
+        actS: s.lie !== 'green' ? actualShape(s) : null, cg: clubGroup(s.club) };
+      if (reached === null && (eLie === 'green' || eLie === 'hole')) reached = { strokes, i };
+      rows.push(row); hs.rows.push(row);
+    });
+    hs.score = strokes;
+    hs.pens = sh.filter(s => s.pen).length;
+    hs.putts = sh.filter(s => s.lie === 'green').length;
+    hs.sg = sum(hs.rows.map(x => x.sg)); hs.sgA = sum(hs.rows.map(x => x.sgA));
+    if (sh.length){
+      const t = hs.rows[0];
+      if (par >= 4 && t.lie === 'tee'){
+        hs.fir = t.eLie === 'fairway';
+        hs.tee = t.pen ? 'pen' : t.eLie === 'fairway' ? 'fw' : t.eLie === 'fw_bunker' ? 'bunker' : t.eLie === 'recovery' ? 'trouble' : t.eLie === 'green' || t.eLie === 'fringe' || t.eLie === 'hole' ? 'green' :
+          ['first_cut','rough','deep_rough'].includes(t.eLie) ? (lateral(t.dir) < 0 ? 'lrough' : lateral(t.dir) > 0 ? 'rrough' : 'rough') : 'other';
+        if (t.eLie !== 'hole' && t.eLie) hs.drive = fin(t.drive) ? t.drive : t.d - t.eYd;
+      } else hs.fir = null;
+      hs.gir = !!reached && reached.strokes <= par - 2;
+      const att = hs.rows.find(x => x.strokeNo === par - 2 && x.lie !== 'green');
+      hs.att = att ? { lie: att.lie, yd: att.yd, q: att.q } : null;
+      if (hs.done){
+        hs.rel = hs.score - par;
+        if (!hs.gir){
+          const sc = hs.rows.find(x => x.lie !== 'green' && x.lie !== 'tee' && x.idx > (att ? att.idx : -1));
+          hs.scr = hs.rel <= 0; hs.scrLie = sc ? sc.lie : null; hs.scrYd = sc ? sc.yd : null;
+        }
+        const sb = hs.rows.findIndex(x => x.lie === 'gs_bunker');
+        if (sb >= 0) hs.sand = hs.rows.length - sb <= 2 && !hs.rows.slice(sb).some(x => x.pen);
+        const ag = hs.rows.findIndex(x => x.cat === 'ARG');
+        if (ag >= 0){ hs.udAtt = true; hs.ud = hs.rows.length - ag <= 2 && !hs.rows.slice(ag).some(x => x.pen); hs.udLie = hs.rows[ag].lie; hs.udYd = hs.rows[ag].yd; }
+        /* Tiger 5 */
+        hs.t5 = { par5bogey: par === 5 && hs.rel >= 1, double: hs.rel >= 2, three: hs.putts >= 3,
+          inside150: !!att && att.yd <= 150 && !['recovery','deep_rough','gs_bunker','fw_bunker'].includes(att.lie) && hs.rel >= 1,
+          easyChip: ag >= 0 && hs.rows[ag].yd <= 20 && ['fairway','first_cut','fringe','rough'].includes(hs.rows[ag].lie) && hs.rows.length - ag >= 3 };
+        if (par === 5 && hs.rows[1] && hs.rows[1].lie !== 'green'){ const s2 = hs.rows[1]; hs.go = s2.aim !== 'layup' && s2.type !== 'layup' && s2.cat === 'APP'; hs.goGreen = hs.go && hs.gir && reached && reached.strokes <= 2; }
+      }
+    }
+    holes.push(hs);
+  });
+  const done = holes.filter(h => h.done);
+  const sumH = { round: r, holes, rows, nDone: done.length, score: sum(done.map(h => h.score)), par: sum(done.map(h => h.par)),
+    sg: sum(rows.map(x => x.sg)), sgA: sum(rows.map(x => x.sgA)), cats: {}, catsA: {} };
+  CATS.forEach(c => { sumH.cats[c] = sum(rows.filter(x => x.cat === c).map(x => x.sg)); sumH.catsA[c] = sum(rows.filter(x => x.cat === c).map(x => x.sgA)); });
+  sumH.toPar = sumH.score - sumH.par;
+  /* bounce back */
+  let bbA = 0, bbS = 0; for (let i = 1; i < holes.length; i++){ const p = holes[i - 1], c = holes[i]; if (p.done && c.done && p.rel >= 1){ bbA++; if (c.rel <= -1) bbS++; } }
+  sumH.bbA = bbA; sumH.bbS = bbS;
+  return sumH;
+}
+
+/* =====================================================================
+   Store: local mirror + db sync (one document per round)
+   ===================================================================== */
+const APP_VERSION = '3.0.0';
+const LS_KEY = 'shotlab2', SYNC_KEY = 'shotlab.sync', GIST_FILE = 'shotlab-data.json';
+const St = { rounds: {}, courses: {}, meta: { bag: BAG_DEFAULT.map(b => b.slice()), view: 'pga', scope: 'all', rtype: 'all', base: 'tour', entry: 'full', theme: 'auto', wake: true, updated: 0 }, active: null, ex: false };
+
+/* IndexedDB keeps a durable copy of everything; localStorage is the fast synchronous mirror. */
+const IDB = {
+  db: null,
+  open(){ return new Promise(res => { try { const r = indexedDB.open('shotlab', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => { IDB.db = r.result; res(r.result); }; r.onerror = () => res(null); } catch (e) { res(null); } }); },
+  async get(k){ const db = IDB.db || await IDB.open(); if (!db) return null; return new Promise(res => { try { const q = db.transaction('kv').objectStore('kv').get(k); q.onsuccess = () => res(q.result ?? null); q.onerror = () => res(null); } catch (e) { res(null); } }); },
+  async set(k, v){ const db = IDB.db || await IDB.open(); if (!db) return; return new Promise(res => { try { const tx = db.transaction('kv', 'readwrite'); tx.objectStore('kv').put(v, k); tx.oncomplete = () => res(); tx.onerror = () => res(); } catch (e) { res(); } }); }
+};
+const snapshot = () => JSON.stringify({ rounds: St.rounds, courses: St.courses, meta: St.meta, active: St.active });
+function loadLocal(){
+  try { const raw = localStorage.getItem(LS_KEY); if (!raw) return; const o = JSON.parse(raw); Object.assign(St.rounds, o.rounds || {}); Object.assign(St.courses, o.courses || {}); if (o.meta) St.meta = Object.assign(St.meta, o.meta); St.active = o.active || null; } catch (e) {}
+}
+async function loadDurable(){
+  const raw = await IDB.get('data'); if (!raw) { IDB.set('data', snapshot()); return; }
+  let o; try { o = JSON.parse(raw); } catch (e) { return; }
+  const ch = mergeData(o);
+  if (!St.active && o.active && St.rounds[o.active.rid]) St.active = o.active;
+  if (ch){ saveLocal(); Cache.clear(); App.render(); }
+}
+let idbT = null;
+function saveLocal(){
+  const snap = snapshot();
+  try { localStorage.setItem(LS_KEY, snap); } catch (e) {}
+  clearTimeout(idbT); idbT = setTimeout(() => IDB.set('data', snapshot()), 400);
+}
+/* Merge another copy of the data (IndexedDB, an import, or the cloud) into this one. Newest edit of each round wins. */
+function mergeData(o){
+  let ch = false;
+  for (const [coll, map] of [['rounds', St.rounds], ['courses', St.courses]]){
+    for (const v of Object.values((o && o[coll]) || {})){
+      if (!v || !v.id) continue;
+      const loc = map[v.id];
+      if (!loc || (v.updated || 0) > (loc.updated || 0)){ map[v.id] = JSON.parse(JSON.stringify(v)); ch = true; }
+    }
+  }
+  if (o && o.meta && (o.meta.updated || 0) > (St.meta.updated || 0)){ St.meta = Object.assign(St.meta, o.meta); ch = true; }
+  return ch;
+}
+
+/* Optional cloud sync through a private GitHub Gist, so the phone and the laptop share rounds. */
+const Sync = {
+  state: 'local', cfg: null, timer: null, busy: false, again: false,
+  load(){ try { Sync.cfg = JSON.parse(localStorage.getItem(SYNC_KEY) || 'null'); } catch (e) { Sync.cfg = null; } Sync.setState(Sync.on() ? 'idle' : 'local'); },
+  saveCfg(){ try { Sync.cfg ? localStorage.setItem(SYNC_KEY, JSON.stringify(Sync.cfg)) : localStorage.removeItem(SYNC_KEY); } catch (e) {} },
+  on(){ return !!(Sync.cfg && Sync.cfg.token && Sync.cfg.gist); },
+  setState(s, msg){
+    Sync.state = s; Sync.msg = msg || '';
+    const el = $('#sync'); if (!el) return;
+    el.className = 'sync ' + ({ ok: 'ok', busy: 'busy', off: 'off', err: 'off', idle: 'ok' }[s] || '');
+    el.lastChild.textContent = { ok: 'Synced', idle: 'Sync on', busy: 'Syncing', off: 'Offline · saved', err: msg || 'Sync problem', local: 'On this phone' }[s] || 'On this phone';
+  },
+  async api(path, opt = {}){
+    const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 20000);
+    try {
+      const r = await fetch('https://api.github.com' + path, { method: opt.method || 'GET', body: opt.body, signal: ctl.signal, cache: 'no-store',
+        headers: Object.assign({ Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', Authorization: 'Bearer ' + Sync.cfg.token }, opt.body ? { 'Content-Type': 'application/json' } : {}) });
+      if (!r.ok){ const e = new Error('GitHub said ' + r.status); e.status = r.status; throw e; }
+      return r.status === 204 ? null : r.json();
+    } finally { clearTimeout(to); }
+  },
+  payload(){ return JSON.stringify({ app: 'shotlab', v: 3, saved: Date.now(), rounds: St.rounds, courses: St.courses, meta: St.meta }); },
+  async connect(token){
+    Sync.cfg = { token: token.trim() };
+    const list = await Sync.api('/gists?per_page=100');
+    const g = (list || []).find(x => x.files && x.files[GIST_FILE]);
+    if (g) Sync.cfg.gist = g.id;
+    else { const c = await Sync.api('/gists', { method: 'POST', body: JSON.stringify({ description: 'Shot Lab data (private, used by the Shot Lab app)', public: false, files: { [GIST_FILE]: { content: Sync.payload() } } }) }); Sync.cfg.gist = c.id; }
+    Sync.saveCfg(); await Sync.now();
+  },
+  async pull(){
+    const g = await Sync.api('/gists/' + Sync.cfg.gist);
+    const f = g.files && g.files[GIST_FILE]; if (!f) return null;
+    let txt = f.content;
+    if (f.truncated){ const r = await fetch(f.raw_url, { cache: 'no-store' }); txt = await r.text(); }
+    try { return JSON.parse(txt); } catch (e) { return null; }
+  },
+  needsPush(remote){
+    if (!remote) return true;
+    for (const [coll, map] of [['rounds', St.rounds], ['courses', St.courses]]){
+      const rm = remote[coll] || {};
+      for (const v of Object.values(map)){ const r = rm[v.id]; if (!r || (v.updated || 0) > (r.updated || 0)) return true; }
+    }
+    return (St.meta.updated || 0) > ((remote.meta || {}).updated || 0);
+  },
+  async now(){
+    clearTimeout(Sync.timer); Sync.timer = null;
+    if (!Sync.on()) return;
+    if (!navigator.onLine){ Sync.setState('off'); return; }
+    if (Sync.busy){ Sync.again = true; return; }
+    Sync.busy = true; Sync.setState('busy');
+    try {
+      const remote = await Sync.pull();
+      if (remote && mergeData(remote)){ saveLocal(); Cache.clear(); if (!Entry.typing) App.render(); }
+      if (Sync.needsPush(remote)) await Sync.api('/gists/' + Sync.cfg.gist, { method: 'PATCH', body: JSON.stringify({ files: { [GIST_FILE]: { content: Sync.payload() } } }) });
+      Sync.cfg.last = Date.now(); Sync.saveCfg(); Sync.setState('ok');
+    } catch (e){
+      if (e.status === 401) Sync.setState('err', 'Sync token rejected');
+      else if (e.status === 403) Sync.setState('err', 'Token needs gist access');
+      else if (e.status === 404) Sync.setState('err', 'Sync gist not found');
+      else Sync.setState('off');
+    }
+    Sync.busy = false;
+    if (Sync.again){ Sync.again = false; Sync.soon(2000); }
+    if (location.hash === '#setup' && !Entry.typing) App.render();
+  },
+  soon(ms = 15000){ if (!Sync.on()) return; clearTimeout(Sync.timer); Sync.timer = setTimeout(Sync.now, ms); },
+  disconnect(){ Sync.cfg = null; Sync.saveCfg(); Sync.setState('local'); }
+};
+function saveRound(r){ r.updated = Date.now(); St.rounds[r.id] = r; saveLocal(); Cache.clear(); Sync.soon(); }
+function saveCourse(c){ c.updated = Date.now(); St.courses[c.id] = c; saveLocal(); Sync.soon(); }
+function saveMeta(){ St.meta.updated = Date.now(); saveLocal(); Cache.clear(); Sync.soon(); }
+const Cache = { m: new Map(), clear(){ this.m.clear(); }, get(k, f){ if (!this.m.has(k)) this.m.set(k, f()); return this.m.get(k); } };
+/* Rules-safe mode: during a competitive round nothing analyses the round in progress (Rule 4.3a). */
+const tm = r => !!(r && r.tmode && r.status !== 'done');
+const realRounds = () => Object.values(St.rounds).filter(r => !r.deleted).sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.created || 0) - (a.created || 0));
+
+/* =====================================================================
+   Example data (shown only until the first real round exists; never saved)
+   ===================================================================== */
+const Example = {
+  course: { name: 'Example Golf Club', tees: 'Championship', holes: [[4,452,5],[5,548,11],[4,431,7],[3,198,15],[4,468,1],[4,409,13],[3,221,17],[5,571,9],[4,447,3],[4,430,8],[3,176,18],[4,476,2],[5,592,10],[4,415,14],[4,462,4],[3,232,16],[4,438,12],[5,560,6]].map(([par, yards, si]) => ({ par, yards, si })) },
+  rounds(){
+    if (Example._r) return Example._r;
+    const rand = rng(20261030), g = (m = 0, s = 1) => m + s * Math.sqrt(-2 * Math.log(Math.max(1e-9, rand()))) * Math.cos(2 * Math.PI * rand());
+    const pick = a => a[Math.floor(rand() * a.length)];
+    const out = [];
+    const dates = ['2026-09-12','2026-09-19','2026-09-27','2026-10-04','2026-10-11','2026-10-18','2026-10-25'];
+    dates.forEach((date, ri) => {
+      const ws = [4, 11, 7, 15, 6, 9, 12][ri];
+      const r = { id: 'ex' + ri, ex: true, date, course: Example.course.name, tees: 'Championship', type: ri % 3 === 0 ? 'tournament' : 'casual', status: 'done',
+        holes: Example.course.holes.map(h => ({ ...h, shots: [], done: true })) };
+      r.holes.forEach(h => {
+        let d = h.yards, lie = 'tee', guard = 0;
+        while (guard++ < 10){
+          const s = { d: r1(d), lie, q: (QUAL[lie] || []).length ? ((QUAL[lie].find(q => q[0] === 'good') || QUAL[lie][0])[0]) : undefined, sl: 'flat', wd: pick(Object.keys(WIND)), ws, ts: 0 };
+          if (lie === 'rough' && rand() < .25) s.q = pick(['down','flyer','up']);
+          if (lie !== 'tee' && lie !== 'green' && rand() < .3) s.sl = pick(['up','down','above','below']);
+          h.shots.push(s);
+          if (guard === 10){ break; }
+          if (lie === 'green'){
+            s.club = 'Putter'; s.type = 'putt'; s.brk = pick(['straight','lr','rl','lr','rl']); s.pslope = pick(['up','flat','down']); delete s.wd; delete s.ws; delete s.sl;
+            let p = I(TOUR_MAKE, d); if (d >= 4 && d <= 9) p -= .1; else p += .03;
+            if (rand() < p) break;
+            const leave = d < 9 ? .8 + rand() * 2 : Math.max(.8, d * .075 + Math.abs(g(0, 1.4)));
+            s.miss = d > 18 ? pick(['short','long','long','short','high']) : pick(['high','low','low','long','short']);
+            d = r1(leave); lie = 'green'; continue;
+          }
+          const y = yd(d, lie);
+          if (lie !== 'tee' && y <= 30){
+            s.club = lie === 'gs_bunker' ? '58' : y < 12 ? '58' : '54'; s.type = lie === 'gs_bunker' ? 'bunker' : y < 12 ? 'chip' : 'pitch'; s.aim = 'close'; s.act = 'asplan'; s.shape = 'straight';
+            if (rand() < .035) break;
+            const base = lie === 'gs_bunker' ? 6.5 : lie === 'rough' ? 5 : 3.4;
+            const ft = Math.max(1, base * Math.exp(g(0, .45)) * (1 + y / 40));
+            s.dir = pick(['C','C','S0','L0','ML','MR']); d = r1(ft); lie = 'green'; continue;
+          }
+          if (lie === 'tee' && h.par >= 4){
+            s.club = 'Dr'; s.aim = 'center'; s.shape = 'draw'; s.type = 'full';
+            const tot = 300 + g(0, 11) - (ws > 12 ? 6 : 0), x = rand();
+            let el, dir, act;
+            if (x < .58){ el = 'fairway'; dir = 'C'; act = pick(['asplan','asplan','asplan','straight']); } else if (x < .7){ el = 'rough'; dir = 'ML'; act = pick(['hook','pull']); } else if (x < .87){ el = 'rough'; dir = 'MR'; act = pick(['fade','push','straight']); }
+            else if (x < .93){ el = 'fw_bunker'; dir = pick(['ML','MR']); act = 'push'; } else if (x < .975){ el = 'recovery'; dir = 'MR'; act = 'slice'; } else { el = 'pen'; dir = 'MR'; act = 'slice'; }
+            s.dir = dir; s.act = act; s.strike = 'pure';
+            if (el === 'pen'){ s.pen = 'water'; d = Math.max(60, d - tot + 25); lie = 'rough'; continue; }
+            d = Math.max(25, Math.round(d - tot)); lie = el; continue;
+          }
+          /* approach or layup */
+          if (h.par === 5 && h.shots.length === 2 && y > 255){
+            s.club = '5i'; s.aim = 'layup'; s.type = 'layup'; s.shape = 'straight'; s.act = 'asplan'; s.dir = 'C';
+            d = Math.round(80 + rand() * 30); lie = rand() < .82 ? 'fairway' : 'rough'; continue;
+          }
+          let club = 'PW', best = 1e9; for (const [c, ca, to] of BAG_DEFAULT){ if (c === 'Putter') continue; const v = Math.abs((ca + to) / 2 - y); if (v < best){ best = v; club = c; } }
+          s.club = club; s.type = 'full'; s.aim = y < 130 ? 'pin' : pick(['pin','middle','middle']); s.shape = clubGroup(club) === 'Mid irons' ? 'straight' : pick(['straight','draw','fade']);
+          const fadeHabit = clubGroup(club) === 'Mid irons' && rand() < .5;
+          s.act = fadeHabit ? 'fade' : rand() < .82 ? 'asplan' : pick(['pull','push']);
+          s.strike = rand() < .82 ? 'pure' : pick(['thin','fat','toe']);
+          const mult = (lie === 'rough' ? 1.45 : lie === 'deep_rough' ? 2 : lie === 'fw_bunker' ? 1.6 : lie === 'recovery' ? 2.6 : lie === 'first_cut' ? 1.15 : 1) * (s.q === 'down' ? 1.35 : 1) * (fadeHabit ? 1.35 : 1) * (s.strike === 'pure' ? 1 : 1.5);
+          const prox = I(TOUR_PROX_FW, y) * .97 * mult * Math.exp(g(0, .4));
+          if (lie === 'recovery' && rand() < .6){ s.aim = 'out'; s.type = 'punch'; d = Math.round(y * .4 + 20); lie = 'fairway'; s.dir = 'C'; continue; }
+          if (prox < 1.2 && rand() < .5) break;
+          if (prox <= 42){ d = r1(Math.max(1.5, prox)); lie = 'green'; s.dir = fadeHabit ? pick(['MR','LR','C']) : pick(['C','C','S0','L0','ML','MR','SL','SR']); continue; }
+          s.dir = fadeHabit ? pick(['MR','SR','LR']) : pick(['ML','MR','S0','L0','SL','SR','LL','LR']);
+          const ml = rand(); const miss = 4 + rand() * 22;
+          if (ml < .33){ lie = 'gs_bunker'; d = r1(miss); } else if (ml < .7){ lie = 'rough'; d = r1(miss); } else { lie = 'fringe'; d = r1(Math.min(miss, 12) * 3); }
+        }
+      });
+      out.push(r);
+    });
+    return (Example._r = out);
+  }
+};
+
+/* =====================================================================
+   Aggregation over many rounds (filtered), cached
+   ===================================================================== */
+function scopeRounds(){
+  const real = realRounds().filter(r => !tm(r) && (r.status === 'done' || (r.holes || []).some(h => h.done)));
+  const useEx = !real.length;
+  St.ex = useEx;
+  let list = useEx ? Example.rounds().slice().reverse() : real;
+  if (St.meta.rtype === 'comp') list = list.filter(r => r.type === 'tournament' || r.type === 'qualifier');
+  else if (St.meta.rtype === 'casual') list = list.filter(r => r.type === 'casual' || r.type === 'practice');
+  if (St.meta.scope !== 'all') list = list.slice(0, +St.meta.scope);
+  return list;
+}
+function agg(){
+  return Cache.get('agg|' + St.meta.scope + '|' + St.meta.rtype + '|' + St.meta.view + '|' + BASE, () => {
+    const rs = scopeRounds().map(analyzeRound);
+    const adj = St.meta.view === 'ctx';
+    const rows = rs.flatMap(r => r.rows).map(x => Object.assign(x, { v: adj ? x.sgA : x.sg }));
+    const holes = rs.flatMap(r => r.holes).filter(h => h.done);
+    const nR = Math.max(1, rs.reduce((a, r) => a + r.nDone / 18, 0));
+    return { rs, rows, holes, nR, adj, ex: St.ex };
+  });
+}
+
+/* =====================================================================
+   UI helpers + charts
+   ===================================================================== */
+const UI = {
+  toast(m){ const t = $('#toast'); t.textContent = m; t.className = 'on'; clearTimeout(UI._t); UI._t = setTimeout(() => t.className = '', 2400); },
+  sheet(html){ $('#sheetPn').innerHTML = html; $('#sheet').classList.add('on'); },
+  close(){ $('#sheet').classList.remove('on'); $('#sheetPn').innerHTML = ''; },
+  chips(list, cur, field, o = {}){
+    return `<div class="chips${o.scroll ? ' scroll' : ''}" role="group" aria-label="${esc(o.label || field)}">` + list.map(([v, l]) => `<button type="button" class="chip${o.sm ? ' sm' : ''}${o.sugg === v ? ' sugg' : ''}${o.bad ? ' bad' : ''}${o.need && cur == null ? ' need' : ''}" data-set="${field}" data-v="${esc(v)}" aria-pressed="${String(cur) === String(v)}">${esc(l)}</button>`).join('') + '</div>';
+  },
+  sel(id, opts, cur, attrs = ''){ return `<select id="${id}" ${attrs}>` + opts.map(([v, l]) => `<option value="${esc(v)}"${String(cur) === String(v) ? ' selected' : ''}>${esc(l)}</option>`).join('') + '</select>'; },
+  empty(t, s){ return `<div class="empty"><b>${esc(t)}</b>${esc(s || '')}</div>`; },
+  card(title, body, why, extra = ''){ return `<section class="card"><div class="row between" style="margin-bottom:10px"><h3 style="margin:0">${esc(title)}</h3>${extra}</div>${body}${why ? `<p class="why">${why}</p>` : ''}</section>`; },
+  sc(score, par){ const d = score - par; const c = d <= -2 ? 'e' : d === -1 ? 'b' : d === 1 ? 'bo' : d >= 2 ? 'd' : ''; return `<span class="sc ${c}">${score}</span>`; },
+  tbl(head, rows, o = {}){ return `<div class="tw"><table><thead><tr>${head.map((h, i) => `<th${o.num && o.num.includes(i) ? ' class="n"' : ''}>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${r.map((c, i) => `<td${o.num && o.num.includes(i) ? ' class="n"' : ''}>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`; }
+};
+const tipA = t => ` data-tip="${esc(t)}"`;
+const sgCol = v => v >= 0 ? 'var(--gain)' : 'var(--loss)';
+const lin = (a, b, c, d) => v => c + (v - a) / ((b - a) || 1) * (d - c);
+
+const Ch = {
+  /* horizontal diverging bars around zero */
+  bars(items, o = {}){
+    const it = items.filter(i => i.n && fin(i.v));
+    if (!it.length) return UI.empty(o.empty || 'No shots in this group yet');
+    const W = 560, rh = 30, H = items.length * rh + 6, L = o.lw || 168, R = 78;
+    const m = Math.max(o.min || .1, ...it.map(i => Math.abs(i.v))) * 1.1, x = lin(-m, m, L, W - R);
+    let g = `<line x1="${x(0)}" x2="${x(0)}" y1="0" y2="${H}" stroke="var(--base)" stroke-dasharray="3 3"/>`;
+    items.forEach((i, k) => {
+      const y = 4 + k * rh;
+      g += `<text x="${L - 8}" y="${y + 17}" text-anchor="end" class="lbl" font-size="12">${esc(i.l)}</text>`;
+      if (!i.n || !fin(i.v)){ g += `<text x="${x(0) + 6}" y="${y + 17}" font-size="11">no shots</text>`; return; }
+      const x0 = x(0), x1 = x(i.v);
+      g += `<rect x="${Math.min(x0, x1)}" y="${y + 5}" width="${Math.max(2, Math.abs(x1 - x0))}" height="${rh - 12}" rx="3" fill="${sgCol(i.v)}"${tipA(i.tip || `${i.l}\n${sgT(i.v)} ${o.unit || ''}\n${i.n} shots`)} tabindex="0"/>`;
+      g += `<text x="${W - R + 6}" y="${y + 17}" font-size="11.5" class="lbl">${o.fmt ? o.fmt(i.v) : sgT(i.v)}</text><text x="${W - 4}" y="${y + 17}" text-anchor="end" font-size="10">${i.n}</text>`;
+    });
+    return `<svg class="ch" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.label || 'Bar chart')}">${g}</svg>`;
+  },
+  /* per-round trend: total bars + rolling line */
+  trend(rs, key){
+    const done = rs.filter(r => r.nDone >= 9).slice().reverse();
+    if (!done.length) return UI.empty('No completed rounds yet');
+    const W = 560, H = 210, L = 40, R = 14, Tm = 14, B = 26;
+    const vals = done.map(r => key === 'total' ? (St.meta.view === 'ctx' ? r.sgA : r.sg) : (St.meta.view === 'ctx' ? r.catsA : r.cats)[key]);
+    const m = Math.max(1, ...vals.map(v => Math.abs(v))) * 1.15, y = lin(-m, m, H - B, Tm);
+    const slot = (W - L - R) / done.length, bw = Math.min(26, slot * .6);
+    let g = '';
+    [-m, -m / 2, 0, m / 2, m].forEach(v => g += `<line class="gl" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${sgT(v, 1)}</text>`);
+    done.forEach((r, i) => { const v = vals[i], cx = L + slot * i + slot / 2; g += `<rect x="${cx - bw / 2}" y="${Math.min(y(0), y(v))}" width="${bw}" height="${Math.max(1.5, Math.abs(y(v) - y(0)))}" rx="2" fill="${sgCol(v)}" opacity=".85"${tipA(`${r.round.date} · ${r.round.course}\n${key === 'total' ? 'Total' : CATL[key]}: ${sgT(v)}`)} tabindex="0"/>`; if (i % Math.ceil(done.length / 8) === 0) g += `<text x="${cx}" y="${H - 8}" text-anchor="middle" font-size="10">${esc((r.round.date || '').slice(5))}</text>`; });
+    const roll = vals.map((_, i) => mean(vals.slice(Math.max(0, i - 4), i + 1)));
+    g += `<polyline fill="none" stroke="var(--ink)" stroke-width="2" points="${roll.map((v, i) => `${L + slot * i + slot / 2},${y(v)}`).join(' ')}"/>`;
+    g += `<line x1="${L}" x2="${W - R}" y1="${y(0)}" y2="${y(0)}" stroke="var(--base)" stroke-dasharray="4 3"/>`;
+    return `<svg class="ch" viewBox="0 0 ${W} ${H}" role="img" aria-label="Strokes gained by round">${g}</svg><div class="legend"><span><i style="background:var(--gain)"></i>round gained</span><span><i style="background:var(--loss)"></i>round lost</span><span><i style="background:var(--ink)"></i>5-round average</span></div>`;
+  },
+  /* stylised hole with every shot, plus a zoomed green for the putts */
+  hole(h){
+    const rows = h.rows; if (!rows.length) return UI.empty('No shots on this hole');
+    const L = Math.max(h.yards || rows[0].yd || 400, 120);
+    const W = 220, H = 400, top = 30, bot = 372;
+    const py = v => top + (v / L) * (bot - top), px = v => W / 2 + v * 1.55;
+    const FW = 15;
+    let g = `<rect width="${W}" height="${H}" rx="12" fill="var(--rough)"/>`;
+    if (h.par >= 4) g += `<rect x="${px(-FW)}" y="${py(Math.max(40, L - 260))}" width="${FW * 2 * 1.55}" height="${Math.max(0, py(L - 25) - py(Math.max(40, L - 260)))}" rx="14" fill="var(--fair)"/>`;
+    g += `<rect x="${px(-FW * .75)}" y="${py(20)}" width="${FW * 1.5 * 1.55}" height="${Math.max(0, py(110) - py(20))}" rx="12" fill="var(--fair)" opacity="${h.par === 3 ? 0 : 1}"/>`;
+    g += `<rect x="${px(-6)}" y="${py(L) - 6}" width="${12 * 1.55}" height="10" rx="3" fill="var(--tee)"/>`;
+    g += `<ellipse cx="${px(-19)}" cy="${py(4)}" rx="9" ry="7" fill="var(--sand)"/><ellipse cx="${px(18)}" cy="${py(-6)}" rx="8" ry="6" fill="var(--sand)"/>`;
+    g += `<ellipse cx="${px(0)}" cy="${py(0)}" rx="${15 * 1.55}" ry="${Math.max(10, 15 * (bot - top) / L)}" fill="var(--greenc)"/>`;
+    g += `<line x1="${px(0)}" y1="${py(0)}" x2="${px(0)}" y2="${py(0) - 18}" stroke="var(--ink)" stroke-width="1.5"/><path d="M${px(0)} ${py(0) - 18}l10 3.5l-10 3.5z" fill="var(--under)"/>`;
+    /* positions */
+    const zone = { fairway: 5, first_cut: 19, rough: 27, deep_rough: 36, fw_bunker: 22, recovery: 44 };
+    let cur = { x: 0, y: L };
+    const pos = [];
+    rows.forEach((s, i) => {
+      if (s.lie === 'green'){ pos.push(null); return; }
+      let end;
+      if (s.holed) end = { x: 0, y: 0 };
+      else if (s.pen === 'ob' || s.pen === 'lost'){ end = { x: (lateral(s.dir) || 1) * 58, y: Math.max(20, cur.y - (s.club === 'Dr' ? 280 : s.yd * .9)), ob: true }; }
+      else if (s.eLie === 'green' || s.eLie === 'fringe' || s.eLie === 'gs_bunker' || (s.eYd != null && s.eYd < 40)){
+        const r = Math.max(s.eLie === 'green' ? s.eYd : s.eYd, s.eLie === 'gs_bunker' || s.eLie === 'fringe' ? 15 : 0);
+        const lx = lateral(s.dir), dy = depthOf(s.dir);
+        let vx = lx, vy = -dy; if (!lx && !dy){ vx = .35; vy = .94; } const m = Math.hypot(vx, vy) || 1;
+        end = { x: vx / m * r, y: vy / m * r * (dy === 0 && !lx ? 1 : 1) };
+        if (dy === 0 && lx) end.y = Math.max(0, r * .2);
+        if (dy < 0) end.y = Math.abs(end.y);
+      } else {
+        const off = (zone[s.eLie] ?? 10) * (lateral(s.dir) || (i % 2 ? 1 : -1) * (s.eLie === 'fairway' ? .4 : 1));
+        const yy = Math.sqrt(Math.max(0, s.eYd * s.eYd - off * off));
+        end = { x: off, y: yy };
+      }
+      pos.push({ s, a: cur, b: end });
+      if (!end.ob) cur = end;
+    });
+    pos.forEach((p, k) => {
+      if (!p) return;
+      const { s, a, b } = p, x1 = px(a.x), y1 = py(a.y), x2 = px(b.x), y2 = py(b.y);
+      const k2 = { draw: .1, hook: .18, fade: -.1, slice: -.18 }[s.actS] || 0;
+      const cx = (x1 + x2) / 2 - (y2 - y1) * k2, cy = (y1 + y2) / 2 + (x2 - x1) * k2;
+      g += `<path d="M${x1} ${y1}Q${cx} ${cy} ${x2} ${y2}" fill="none" stroke="${sgCol(s.v)}" stroke-width="3" stroke-linecap="round"${b.ob ? ' stroke-dasharray="5 4"' : ''}${tipA(`Shot ${s.n}: ${s.club || ''} from ${Fmt.dist(s.d, s.lie)} ${LIE[s.lie] || ''}\n${s.holed ? 'Holed' : s.pen ? PENS.find(x => x[0] === s.pen)[1] : 'Finished ' + Fmt.dist(s.eD, s.eLie) + ' ' + (LIE[s.eLie] || '')}\nSG ${sgT(s.v)}`)}/>`;
+      g += `<circle cx="${x1}" cy="${y1}" r="9" fill="var(--card)" stroke="${sgCol(s.v)}" stroke-width="2"/><text x="${x1}" y="${y1 + 4}" text-anchor="middle" class="lbl" font-size="10">${s.n}</text>`;
+      if (b.ob) g += `<text x="${x2}" y="${y2 - 6}" text-anchor="middle" class="lbl" font-size="10" style="fill:var(--loss)">${s.pen === 'ob' ? 'OB' : 'Lost'}</text>`;
+      const lx = x1 + (x2 - x1) * .55 + 10, ly = y1 + (y2 - y1) * .55;
+      g += `<text x="${Math.min(lx, W - 4)}" y="${ly}" text-anchor="${lx > W - 60 ? 'end' : 'start'}" font-size="10.5" class="lbl">${esc(s.club || '')} ${sgT(s.v)}</text>`;
+    });
+    /* putting inset */
+    const putts = rows.filter(s => s.lie === 'green');
+    let inset = '';
+    if (putts.length){
+      const S = 170, c = S / 2, maxFt = Math.max(8, ...putts.map(p => p.d)) * 1.15, k = (c - 14) / maxFt;
+      let ig = `<rect width="${S}" height="${S}" rx="12" fill="var(--rough)"/><circle cx="${c}" cy="${c}" r="${c - 6}" fill="var(--greenc)"/>`;
+      [3, 10, 20, 40].forEach(f => { if (f * k < c - 8) ig += `<circle cx="${c}" cy="${c}" r="${f * k}" fill="none" stroke="var(--card)" stroke-opacity=".5" stroke-dasharray="2 3"/><text x="${c + f * k * .7 + 2}" y="${c - f * k * .7}" font-size="9">${f}ft</text>`; });
+      const app = rows[putts[0].idx - 1];
+      let ang = app ? Math.atan2(depthOf(app.dir) ? -depthOf(app.dir) : .9, lateral(app.dir) || .35) : Math.PI / 2;
+      let p0 = { x: c + Math.cos(ang) * putts[0].d * k, y: c + Math.sin(ang) * putts[0].d * k };
+      putts.forEach((p, i) => {
+        let e;
+        if (p.holed) e = { x: c, y: c };
+        else { const nd = p.eD * k, ux = (p0.x - c), uy = (p0.y - c), m = Math.hypot(ux, uy) || 1; const nx = ux / m, ny = uy / m;
+          if (p.miss === 'long') e = { x: c - nx * nd, y: c - ny * nd }; else if (p.miss === 'short') e = { x: c + nx * nd, y: c + ny * nd };
+          else { const sgn = p.miss === 'high' ? 1 : -1; e = { x: c - ny * nd * sgn, y: c + nx * nd * sgn }; } }
+        ig += `<line x1="${p0.x}" y1="${p0.y}" x2="${e.x}" y2="${e.y}" stroke="${sgCol(p.v)}" stroke-width="2.5"${tipA(`Putt ${i + 1}: ${Fmt.ft(p.d)}${p.brk ? ', ' + BRK.find(b => b[0] === p.brk)[1].toLowerCase() : ''}\n${p.holed ? 'Holed' : 'Missed ' + (p.miss || '') + ', left ' + Fmt.ft(p.eD)}\nSG ${sgT(p.v)}`)}/><circle cx="${p0.x}" cy="${p0.y}" r="7" fill="var(--card)" stroke="${sgCol(p.v)}" stroke-width="2"/><text x="${p0.x}" y="${p0.y + 3.5}" text-anchor="middle" font-size="8.5" class="lbl">${p.n}</text>`;
+        p0 = e;
+      });
+      ig += `<circle cx="${c}" cy="${c}" r="3" fill="var(--ink)"/>`;
+      inset = `<div><div class="tiny mute" style="margin-bottom:4px">On the green</div><svg class="ch" viewBox="0 0 ${S} ${S}" role="img" aria-label="Putts on hole ${h.hole}">${ig}</svg></div>`;
+    }
+    return `<div style="display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:12px;align-items:start"><svg class="ch" viewBox="0 0 ${W} ${H}" role="img" aria-label="Shots on hole ${h.hole}">${g}</svg>${inset || '<div class="tiny mute">No putts</div>'}</div>`;
+  },
+  /* tee shot dispersion: distance vs side */
+  drives(drs){
+    if (!drs.length) return UI.empty('No tee shots yet');
+    const W = 360, H = 360, ds = drs.map(d => d.dist).filter(fin), lo = Math.floor((Math.min(...ds, 240) - 10) / 20) * 20, hi = Math.ceil((Math.max(...ds, 320) + 10) / 20) * 20;
+    const y = lin(lo, hi, H - 24, 18), x = v => W / 2 + v * 3.4;
+    let g = `<rect width="${W}" height="${H}" rx="12" fill="var(--rough)"/><rect x="${x(-15)}" y="0" width="${30 * 3.4}" height="${H}" fill="var(--fair)"/>`;
+    for (let v = lo; v <= hi; v += 20) g += `<line x1="0" x2="${W}" y1="${y(v)}" y2="${y(v)}" stroke="var(--card)" stroke-opacity=".35"/><text x="6" y="${y(v) - 3}" font-size="10">${v}</text>`;
+    g += `<text x="${x(0)}" y="12" text-anchor="middle" class="lbl" font-size="10">FAIRWAY</text><text x="10" y="${H - 8}" font-size="10">LEFT</text><text x="${W - 10}" y="${H - 8}" text-anchor="end" font-size="10">RIGHT</text>`;
+    const zone = { fw: 0, lrough: -27, rrough: 27, rough: 24, bunker: 22, trouble: 44, pen: 50, green: 0, other: 30 };
+    drs.forEach((d, i) => {
+      const side = d.res === 'fw' ? ((i * 37) % 23 - 11) * .9 : (zone[d.res] ?? 30) * (d.side || 1) + ((i * 13) % 9 - 4);
+      const yy = fin(d.dist) ? y(clamp(d.dist, lo, hi)) : y(lo);
+      g += `<circle cx="${x(clamp(side, -50, 50))}" cy="${yy}" r="5.5" fill="${sgCol(d.v)}" stroke="var(--card)" stroke-width="1.2"${tipA(`${d.date} · hole ${d.hole}\n${d.club || ''} ${fin(d.dist) ? Math.round(d.dist) + ' yds' : ''}\n${d.label}\nSG ${sgT(d.v)}`)}/>`;
+    });
+    return `<svg class="ch" viewBox="0 0 ${W} ${H}" role="img" aria-label="Tee shot dispersion">${g}</svg><div class="legend"><span><i style="background:var(--gain)"></i>gained</span><span><i style="background:var(--loss)"></i>lost</span><span>height = distance (yds)</span></div>`;
+  },
+  /* approach result grid drawn over a green */
+  green(apps){
+    if (!apps.length) return UI.empty('No approach shots yet');
+    const W = 330, H = 330, cw = W / 3, chh = H / 3;
+    const order = ['LL','L0','LR','ML','C','MR','SL','S0','SR'];
+    let g = `<rect width="${W}" height="${H}" rx="12" fill="var(--rough)"/><ellipse cx="${W / 2}" cy="${H / 2}" rx="${cw * .95}" ry="${chh * .95}" fill="var(--greenc)"/><circle cx="${W / 2}" cy="${H / 2}" r="3.5" fill="var(--ink)"/>`;
+    const max = Math.max(1, ...order.map(k => apps.filter(a => a.dir === k).length));
+    order.forEach((k, i) => {
+      const a = apps.filter(x => x.dir === k), cx = (i % 3) * cw, cy = Math.floor(i / 3) * chh;
+      const share = a.length / apps.length, v = mean(a.map(x => x.v));
+      g += `<rect x="${cx + 4}" y="${cy + 4}" width="${cw - 8}" height="${chh - 8}" rx="8" fill="${a.length ? sgCol(v) : 'transparent'}" fill-opacity="${a.length ? .1 + .45 * a.length / max : 0}" stroke="var(--card)" stroke-opacity=".5"${tipA(`${RESL[k]}: ${a.length} shots (${pct(share)})\nAverage SG ${sgT(v)}`)} tabindex="0"/>`;
+      g += `<text x="${cx + cw / 2}" y="${cy + chh / 2 - 2}" text-anchor="middle" class="lbl" font-size="20" style="font-family:var(--display)">${a.length ? pct(share) : '·'}</text><text x="${cx + cw / 2}" y="${cy + chh / 2 + 16}" text-anchor="middle" font-size="11">${a.length ? sgT(v) + '/shot' : RESL[k]}</text>`;
+    });
+    g += `<text x="${W / 2}" y="14" text-anchor="middle" class="lbl" font-size="10">LONG</text><text x="${W / 2}" y="${H - 6}" text-anchor="middle" class="lbl" font-size="10">SHORT</text>`;
+    return `<svg class="ch" viewBox="0 0 ${W} ${H}" role="img" aria-label="Approach miss pattern">${g}</svg>`;
+  },
+  /* make % vs tour by band */
+  makes(bands){
+    if (!bands.some(b => b.n)) return UI.empty('No putts yet');
+    const W = 560, H = 220, L = 40, R = 10, Tm = 16, B = 40, slot = (W - L - R) / bands.length, y = lin(0, 1, H - B, Tm);
+    let g = '';
+    [0, .25, .5, .75, 1].forEach(v => g += `<line class="gl" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v * 100}%</text>`);
+    bands.forEach((b, i) => {
+      const bx = L + slot * i + slot * .18, bw = slot * .64;
+      g += `<text x="${bx + bw / 2}" y="${H - 22}" text-anchor="middle" font-size="10.5">${b.l}</text><text x="${bx + bw / 2}" y="${H - 8}" text-anchor="middle" font-size="9.5">n=${b.n}</text>`;
+      if (!b.n) return;
+      const dlt = b.make - b.tour;
+      g += `<rect x="${bx}" y="${y(b.make)}" width="${bw}" height="${H - B - y(b.make)}" rx="3" fill="${dlt >= 0 ? 'var(--gain)' : 'var(--loss)'}" opacity=".85"${tipA(`${b.l} ft: holed ${pct(b.make)} (${b.n})\nTour ≈ ${pct(b.tour)}\nSG ${sgT(b.sg)} per putt`)} tabindex="0"/>`;
+      g += `<line x1="${bx - 4}" x2="${bx + bw + 4}" y1="${y(b.tour)}" y2="${y(b.tour)}" stroke="var(--base)" stroke-width="3"/>`;
+    });
+    return `<svg class="ch" viewBox="0 0 ${W} ${H}" role="img" aria-label="Make rate by distance">${g}</svg><div class="legend"><span><i style="background:var(--base)"></i>Tour make rate (est.)</span><span><i style="background:var(--gain)"></i>above</span><span><i style="background:var(--loss)"></i>below</span></div>`;
+  },
+  /* proximity vs tour by band */
+  prox(bands){
+    if (!bands.some(b => b.n)) return UI.empty('No approaches finishing on the green yet');
+    const W = 560, H = 230, L = 40, R = 10, Tm = 14, B = 40, slot = (W - L - R) / bands.length;
+    const mx = Math.max(40, ...bands.map(b => Math.max(b.v || 0, b.tour))) * 1.1, y = lin(0, mx, H - B, Tm);
+    let g = '';
+    [0, mx / 4, mx / 2, mx * .75].forEach(v => g += `<line class="gl" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${Math.round(v)}′</text>`);
+    bands.forEach((b, i) => {
+      const bx = L + slot * i + slot * .2, bw = slot * .6;
+      g += `<text x="${bx + bw / 2}" y="${H - 22}" text-anchor="middle" font-size="10">${b.l}</text><text x="${bx + bw / 2}" y="${H - 8}" text-anchor="middle" font-size="9.5">n=${b.n}</text>`;
+      if (b.n) g += `<rect x="${bx}" y="${y(b.v)}" width="${bw}" height="${H - B - y(b.v)}" rx="3" fill="${b.v <= b.tour ? 'var(--gain)' : 'var(--loss)'}" opacity=".85"${tipA(`${b.l} yds: ${Fmt.ft(b.v)} average (${b.n} shots)\nTour ≈ ${Fmt.ft(b.tour)}`)} tabindex="0"/>`;
+      g += `<line x1="${bx - 4}" x2="${bx + bw + 4}" y1="${y(b.tour)}" y2="${y(b.tour)}" stroke="var(--base)" stroke-width="3"/>`;
+    });
+    return `<svg class="ch" viewBox="0 0 ${W} ${H}" role="img" aria-label="Approach proximity by distance">${g}</svg><div class="legend"><span><i style="background:var(--base)"></i>Tour average (est.)</span><span><i style="background:var(--gain)"></i>closer than tour</span><span><i style="background:var(--loss)"></i>further</span></div>`;
+  }
+};
+const Fmt = { ft: v => fin(v) ? (v < 10 ? r1(v) : Math.round(v)) + ' ft' : '—', yd: v => fin(v) ? Math.round(v) + ' yds' : '—', dist: (d, lie) => isFt(lie) ? Fmt.ft(d) : Fmt.yd(d) };
+
+/* =====================================================================
+   Stats calculations
+   ===================================================================== */
+const S = {
+  rate(arr){ const a = arr.filter(x => x != null); return { r: a.length ? a.filter(Boolean).length / a.length : NaN, n: a.length, k: a.filter(Boolean).length }; },
+  slice(rows, f, nR){ const a = rows.filter(f); return { n: a.length, v: sum(a.map(x => x.v)) / nR, per: mean(a.map(x => x.v)) }; },
+  leaks(A){
+    const { rows, nR } = A; const L = [];
+    const add = (l, a, tip, kind) => { if (a.length >= 4){ const v = sum(a.map(x => x.v)) / nR; if (v < -.04) L.push({ l, v, n: a.length, tip, kind }); } };
+    const appB = [[30,75],[75,100],[100,125],[125,150],[150,175],[175,200],[200,225],[225,999]];
+    appB.forEach(([a, b]) => ['fairway','rough'].forEach(lie => add(`Approach ${b > 900 ? a + '+' : a + '–' + b} yds from the ${lie}`, rows.filter(x => x.cat === 'APP' && x.yd >= a && x.yd < b && (lie === 'fairway' ? ['fairway','first_cut','tee'].includes(x.lie) : ['rough','deep_rough'].includes(x.lie))), lie === 'fairway' ? `Stock-distance work from ${a}–${b} yds: 10 balls to one flag, score feet from the hole.` : `Rough practice from ${a}–${b} yds: learn how much less spin and more release you get.`, 'app')));
+    [[0,5],[5,10],[10,20],[20,35],[35,999]].forEach(([a, b]) => add(`Putts ${b > 900 ? a + '+' : a + '–' + b} ft`, rows.filter(x => x.cat === 'PUTT' && x.d >= a && x.d < b), b <= 10 ? 'Start-line and short putts: 50 balls a night from 3–8 ft through a gate.' : a >= 20 ? 'Speed: lag ladders from 25–50 ft, scoring putts that finish inside 3 ft.' : 'Reading and start line from 10–20 ft: one ball, full read, from a new side each time.', 'putt'));
+    ['fairway','rough','gs_bunker','fringe'].forEach(lie => add(`Short game from ${LIE[lie].toLowerCase()}`, rows.filter(x => x.cat === 'ARG' && (lie === 'rough' ? ['rough','deep_rough','first_cut'].includes(x.lie) : x.lie === lie)), `From ${LIE[lie].toLowerCase()}, 20 balls a session from 10–25 yds, scoring how many finish inside 6 ft.`, 'arg'));
+    const tee = rows.filter(x => x.cat === 'OTT');
+    add('Tee shots missed left', tee.filter(x => x.eLie !== 'fairway' && lateral(x.dir) < 0), 'Check driver face-to-path; on tight holes aim at the right half and take the left side out of play.', 'ott');
+    add('Tee shots missed right', tee.filter(x => x.eLie !== 'fairway' && lateral(x.dir) > 0), 'Check driver face-to-path; on tight holes aim at the left half and take the right side out of play.', 'ott');
+    add('Penalty strokes', rows.filter(x => x.pen), 'Pick the club and line that take the penalty side out of play, even if it costs 20 yards.', 'pen');
+    /* shape habits: intended vs actual */
+    for (const [cg, a] of groupBy(rows.filter(x => x.cat === 'APP' || x.cat === 'OTT'), x => x.cg)){
+      if (!cg || cg === 'Putter') continue;
+      const planned = a.filter(x => x.shape && x.act);
+      const match = planned.filter(x => x.act === 'asplan' || x.act === x.shape), miss = planned.filter(x => !(x.act === 'asplan' || x.act === x.shape));
+      if (match.length >= 3 && miss.length >= 3){
+        const cost = (mean(match.map(x => x.v)) - mean(miss.map(x => x.v))) * miss.length / nR;
+        const top = [...groupBy(miss, x => x.act)].sort((p, q) => q[1].length - p[1].length)[0];
+        if (cost > .04) L.push({ l: `${cg}: ${top[0]} instead of the planned shape`, v: -cost, n: planned.length, tip: `${Math.round(miss.length / planned.length * 100)}% of planned ${cg.toLowerCase()} shots came off as something else, mostly a ${top[0]}. Check face-to-path on a launch monitor; on the course, aim for the shot that is coming until practice shows the planned shape again.`, kind: 'shape' });
+      }
+    }
+    return L.sort((a, b) => a.v - b.v);
+  }
+};
+
+/* =====================================================================
+   Entry: the on-course shot card
+   ===================================================================== */
+/* GPS: distance from the player to a saved green centre (allowed under the Rules: distance only, no elevation). */
+const GPS_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" style="flex:none"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>';
+const Geo = {
+  get(){ return new Promise((res, rej) => {
+    if (!navigator.geolocation) return rej(new Error('Location is not available on this device.'));
+    navigator.geolocation.getCurrentPosition(p => res(p.coords), e => rej(new Error(e.code === 1 ? 'Location is blocked. Allow it in iPhone Settings → Privacy → Location Services → Safari Websites.' : 'No GPS fix yet. Try again in the open.')), { enableHighAccuracy: true, timeout: 15000, maximumAge: 2000 });
+  }); },
+  yds(a, b){ const R = 6371000, t = x => x * Math.PI / 180; const dLat = t(b.lat - a.lat), dLng = t(b.lng - a.lng); const h = Math.sin(dLat / 2) ** 2 + Math.cos(t(a.lat)) * Math.cos(t(b.lat)) * Math.sin(dLng / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)) * 1.09361; }
+};
+/* Keep the screen awake while a round is open. */
+const Wake = {
+  lock: null,
+  async want(on){
+    try {
+      if (on && !Wake.lock && 'wakeLock' in navigator && document.visibilityState === 'visible'){ Wake.lock = await navigator.wakeLock.request('screen'); Wake.lock.addEventListener('release', () => { Wake.lock = null; }); }
+      else if (!on && Wake.lock){ const l = Wake.lock; Wake.lock = null; await l.release(); }
+    } catch (e){ Wake.lock = null; }
+  }
+};
+const isStandalone = () => window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+const isIOS = () => /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+function applyTheme(){ const t = St.meta.theme; if (t && t !== 'auto') document.documentElement.setAttribute('data-theme', t); else document.documentElement.removeAttribute('data-theme'); }
+/* Share or download a file (on iPhone this opens the share sheet, so it can go to Files, AirDrop or Mail). */
+async function exportFile(name, text, type){
+  try {
+    const f = new File([text], name, { type });
+    if (navigator.canShare && navigator.canShare({ files: [f] })){ await navigator.share({ files: [f], title: name }); return; }
+  } catch (e){ if (e && e.name === 'AbortError') return; }
+  const url = URL.createObjectURL(new Blob([text], { type })); const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+function shotsCSV(){
+  const cols = ['date','course','round_type','hole','par','shot','club','from_dist','from_unit','lie','lie_quality','stance','wind_from','wind_mph','aim','planned_shape','shot_type','result_zone','actual_shape','strike','penalty','to_dist','to_lie','holed','category','sg_pga','sg_context'];
+  const q = v => { const t = v == null ? '' : String(v); return /[",\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
+  const out = [cols.join(',')];
+  for (const r of realRounds().slice().reverse()){
+    const a = analyzeRound(r);
+    for (const x of a.rows) out.push([r.date, r.course, r.type, x.hole + (r.startHole || 1) - 1, x.par, x.n, x.club, x.d, isFt(x.lie) ? 'ft' : 'yd', x.lie, x.q, x.sl, x.wd, x.ws, x.aim, x.shape, x.type, x.dir, x.act, x.strike, x.pen, x.eD, x.eLie, x.holed ? 1 : 0, x.cat, fin(x.sg) ? x.sg.toFixed(3) : '', fin(x.sgA) ? x.sgA.toFixed(3) : ''].map(q).join(','));
+  }
+  return out.join('\n');
+}
+
+const Entry = {
+  typing: false,
+  round(){ return St.active ? St.rounds[St.active.rid] : null; },
+  hole(){ const r = Entry.round(); return r ? r.holes[St.active.hole] : null; },
+  persist(){ saveLocal(); },
+  suggestClub(d, lie, par){
+    if (lie === 'green') return 'Putter';
+    const bag = St.meta.bag.filter(b => b[0] !== 'Putter');
+    if (lie === 'tee' && par >= 4) return 'Dr';
+    const y = yd(d, lie); if (!fin(y)) return '7i';
+    if (y <= 30) return lie === 'gs_bunker' ? (bag.find(b => /58|56|SW|LW/.test(b[0])) || bag[bag.length - 1])[0] : bag[bag.length - 1][0];
+    let best = bag[bag.length - 1][0], bd = 1e9;
+    for (const [c, ca, to] of bag){ const v = Math.abs((ca + to) / 2 - y * (lie === 'rough' ? .97 : 1)); if (v < bd){ bd = v; best = c; } }
+    return best;
+  },
+  lastShape(club){ for (const r of realRounds()) for (const h of r.holes || []) for (let i = (h.shots || []).length - 1; i >= 0; i--){ const s = h.shots[i]; if (s.club === club && s.shape) return s.shape; } return 'straight'; },
+  defaultQ(lie){ const q = QUAL[lie] || []; return q.length ? (q.find(x => x[0] === 'good') || q[0])[0] : undefined; },
+  newDraft(d, lie, carry = {}){
+    const r = Entry.round(), h = Entry.hole(); const par = h ? h.par : 4; const safe = tm(r);
+    const dr = { d, lie, q: Entry.defaultQ(lie), sl: 'flat' };
+    if (lie !== 'green'){
+      dr.wd = carry.wd ?? (r && r.weather ? r.weather.wd : undefined) ?? 'calm';
+      dr.ws = carry.ws ?? (r && r.weather ? r.weather.ws : 3);
+      dr.club = safe ? null : Entry.suggestClub(d, lie, par); dr.sugg = safe ? null : dr.club;
+      const y = yd(d, lie);
+      if (lie === 'tee' && par >= 4){ dr.aim = 'center'; dr.type = 'full'; }
+      else if (y <= 30){ dr.aim = 'close'; dr.type = lie === 'gs_bunker' ? 'bunker' : y < 12 ? 'chip' : 'pitch'; }
+      else { dr.aim = 'pin'; dr.type = 'full'; }
+      dr.shape = dr.club ? Entry.lastShape(dr.club) : 'straight'; dr.traj = 'mid';
+    } else { dr.club = 'Putter'; dr.type = 'putt'; }
+    return dr;
+  },
+  ensure(){
+    const r = Entry.round(); if (!r){ St.active = null; return null; }
+    const h = Entry.hole();
+    if (!St.active.draft && !h.done){
+      const last = h.shots[h.shots.length - 1];
+      if (!last) St.active.draft = Entry.newDraft(h.yards || 400, 'tee');
+      else if (last.e) St.active.draft = Entry.newDraft(last.e.d, last.e.lie, last);
+      else St.active.draft = Entry.newDraft(h.yards || 400, 'tee');
+      Entry.persist();
+    }
+    return St.active.draft;
+  },
+  set(field, v){
+    const d = St.active && St.active.edit ? St.active.edit.s : Entry.ensure(); if (!d) return;
+    const num = ['ws','elev'].includes(field);
+    if (num) v = +v;
+    if (field === 'lie'){
+      if (isFt(d.lie) !== isFt(v) && fin(d.d)) d.d = r1(isFt(v) ? d.d * 3 : d.d / 3);
+      d.lie = v; d.q = Entry.defaultQ(v);
+      if (v === 'green'){ d.club = 'Putter'; d.type = 'putt'; } else if (d.club === 'Putter'){ const h = Entry.hole(); d.club = tm(Entry.round()) ? null : Entry.suggestClub(d.d, v, h ? h.par : 4); d.sugg = d.club; d.type = yd(d.d, v) <= 30 ? (v === 'gs_bunker' ? 'bunker' : 'chip') : 'full'; d.wd = d.wd || 'calm'; }
+    } else if (field === 'eLie'){
+      if (fin(d.eD) && d.eLie && isFt(d.eLie) !== isFt(v)) d.eD = r1(isFt(v) ? d.eD * 3 : d.eD / 3);
+      d.eLie = v; d.holed = false;
+    } else if (field === 'dir'){
+      d.dir = d.dir === v ? null : v;
+      if (d.dir && !d.eLie){ const h = Entry.hole(); const tee = d.lie === 'tee' && h && h.par >= 4; if (tee) d.eLie = d.dir === 'C' ? 'fairway' : (d.dir === 'ML' || d.dir === 'MR') ? 'rough' : null; else if (d.dir === 'C' && yd(d.d, d.lie) <= 260 && d.aim !== 'layup' && d.type !== 'layup' && d.aim !== 'out') d.eLie = 'green'; }
+    } else if (field === 'pen'){
+      d.pen = d.pen === v ? null : v;
+      if (d.pen === 'ob' || d.pen === 'lost'){ d.eLie = d.lie; d.eD = d.d; }
+    } else if (field === 'club'){ d.club = v; if (d.lie !== 'green') d.shape = Entry.lastShape(v); }
+    else if (['miss','strike','brk','pslope','act','traj','sl','q','aim','type','shape','wd'].includes(field)){ d[field] = (d[field] === v && ['strike','miss'].includes(field)) ? null : v; if (field === 'miss') d.holed = false; }
+    else d[field] = v;
+    Entry.persist(); App.render();
+  },
+  validate(d, holed){
+    if (holed) return null;
+    if (!d.eLie) return 'Pick where the ball finished.';
+    if (!fin(d.eD)) return 'Enter the distance left.';
+    if (d.lie !== 'green' && d.type !== 'chip' && d.type !== 'bunker' && d.type !== 'putt' && yd(d.d, d.lie) > 30 && !d.act && St.meta.entry !== 'quick') return 'Pick the actual shape, or tap As planned.';
+    return null;
+  },
+  build(d, holed){
+    const s = {}; ['d','lie','q','sl','wd','ws','elev','aim','club','shape','traj','type','dir','act','strike','pen','brk','pslope','miss','drive','note'].forEach(k => { if (d[k] != null && d[k] !== '') s[k] = d[k]; });
+    if (s.lie === 'green'){ delete s.wd; delete s.ws; delete s.sl; delete s.q; delete s.shape; delete s.traj; delete s.dir; delete s.act; delete s.aim; }
+    if (holed){ delete s.miss; delete s.pen; s.e = null; } else s.e = { d: d.eD, lie: d.eLie };
+    s.ts = Date.now();
+    return s;
+  },
+  commit(holed){
+    const d = Entry.ensure(); if (!d) return;
+    if (holed && d.lie === 'green') d.miss = null;
+    const err = Entry.validate(d, holed); if (err){ UI.toast(err); return; }
+    const r = Entry.round(), h = Entry.hole();
+    h.shots.push(Entry.build(d, holed));
+    if (holed){
+      h.done = true; St.active.draft = null; saveRound(r);
+      const a = analyzeRound(r).holes[St.active.hole];
+      UI.toast(`Hole ${St.active.hole + 1}: ${a.score} (${toPar(a.score - a.par)})` + (tm(r) ? '' : ` · SG ${sgT(St.meta.view === 'ctx' ? a.sgA : a.sg)}`));
+      const next = r.holes.findIndex((x, i) => i > St.active.hole && !x.done);
+      if (next >= 0){ St.active.hole = next; Entry.ensure(); }
+      else if (r.holes.every(x => x.done)){ r.status = 'done'; saveRound(r); Sync.soon(1500); const id = r.id; St.active = null; saveLocal(); location.hash = '#round-' + id; return; }
+    } else {
+      saveRound(r);
+      St.active.draft = Entry.newDraft(d.eD, d.eLie, d);
+    }
+    Entry.persist(); App.render(); window.scrollTo({ top: 0 });
+  },
+  undo(){
+    const r = Entry.round(), h = Entry.hole(); if (!h || !h.shots.length) return;
+    const s = h.shots.pop(); h.done = false; saveRound(r);
+    St.active.draft = Object.assign(Entry.newDraft(s.d, s.lie), s, { eD: s.e ? s.e.d : null, eLie: s.e ? s.e.lie : null });
+    Entry.persist(); UI.close(); App.render(); UI.toast('Last shot removed. It is back on the card to fix.');
+  },
+  goto(i){ const r = Entry.round(); if (!r) return; St.active.hole = clamp(i, 0, r.holes.length - 1); St.active.draft = null; St.active.edit = null; Entry.ensure(); Entry.persist(); App.render(); },
+  /* edit a committed shot; its finish writes to the next shot's start, so the chain never breaks */
+  startEdit(rid, hi, si){
+    const r = St.rounds[rid]; const h = r.holes[hi]; const s = h.shots[si]; const nx = h.shots[si + 1];
+    const last = si === h.shots.length - 1;
+    const e = nx ? { d: nx.d, lie: nx.lie } : (last && h.done ? null : s.e);
+    if (St.active && St.active.rid !== rid && !St.active.edit) Entry.prev = St.active;
+    St.active = St.active && St.active.rid === rid ? St.active : { rid, hole: hi, draft: null };
+    St.active.edit = { rid, hi, si, back: location.hash, s: Object.assign({}, s, { eD: e ? e.d : null, eLie: e ? e.lie : null, holed: last && h.done }) };
+    St.active.hole = hi;
+    UI.close(); location.hash = '#play';
+    App.render();
+  },
+  saveEdit(){
+    const ed = St.active.edit, r = St.rounds[ed.rid], h = r.holes[ed.hi], d = ed.s;
+    const err = Entry.validate(d, d.holed); if (err){ UI.toast(err); return; }
+    const s = Entry.build(d, d.holed); s.ts = h.shots[ed.si].ts;
+    h.shots[ed.si] = s;
+    const nx = h.shots[ed.si + 1];
+    if (nx && !d.holed){ nx.d = d.eD; nx.lie = d.eLie; if (!(QUAL[nx.lie] || []).some(q => q[0] === nx.q)) nx.q = Entry.defaultQ(nx.lie); }
+    if (d.holed){ h.shots.length = ed.si + 1; h.done = true; }
+    else if (!nx){ h.done = false; if (St.active.draft && St.active.hole === ed.hi){ St.active.draft.d = d.eD; St.active.draft.lie = d.eLie; } }
+    if (ed.si > 0){ const pv = h.shots[ed.si - 1]; pv.e = { d: s.d, lie: s.lie }; }
+    saveRound(r);
+    const back = ed.back; St.active.edit = null;
+    Entry.restore(r);
+    saveLocal(); UI.toast('Shot updated'); location.hash = back && back !== '#play' ? back : '#play'; App.render();
+  },
+  /* after an edit: go back to the round that was in progress, or leave play if this round is finished */
+  restore(r){
+    if (Entry.prev && Entry.prev.rid !== r.id){ St.active = Entry.prev; Entry.prev = null; }
+    else if (r.status === 'done' || (!St.active.draft && r.holes.every(x => x.done))) St.active = null;
+  },
+  liveUpdate(){
+    const d = St.active && St.active.edit ? St.active.edit.s : St.active && St.active.draft; const box = $('#preview'); if (!d || !box) return;
+    const endKnown = d.eLie && fin(d.eD);
+    box.innerHTML = endKnown ? Entry.previewHTML(d) : '';
+    const btn = document.querySelector('[data-act="commit"]'); if (btn){ if (endKnown) btn.removeAttribute('aria-disabled'); else btn.setAttribute('aria-disabled', 'true'); }
+  },
+  previewHTML(d){
+    if (tm(Entry.round())) return '';
+    const pen = d.pen ? 1 : 0;
+    const raw = E(d.d, d.lie) - E(d.eD, d.eLie) - 1 - pen;
+    const ctx = EA(d) - EA({ d: d.eD, lie: d.eLie, q: Entry.defaultQ(d.eLie), sl: 'flat' }) - 1 - pen;
+    return `<div class="preview"><span>This shot</span><span>SG ${sgH(raw)} · Context ${sgH(ctx)}</span></div>`;
+  },
+  render(){
+    const editing = St.active && St.active.edit;
+    const r = Entry.round(); if (!r) return Views.playStart();
+    const hi = St.active.hole, h = r.holes[hi];
+    const d = editing ? St.active.edit.s : Entry.ensure();
+    const an = analyzeRound(r);
+    const thru = an.holes.filter(x => x.done);
+    const relNow = sum(thru.map(x => x.score - x.par));
+    const safe = tm(r), Q = St.meta.entry === 'quick';
+    if (!d && h.done && !editing){
+      const a = an.holes[hi];
+      const next = hi < r.holes.length - 1 ? `<button class="btn pri" data-act="goto" data-v="${hi + 1}">Hole ${hi + 2} →</button>` : `<a class="btn pri" href="#round-${r.id}">Round summary</a>`;
+      $('#view').innerHTML = `<div class="entry">${Entry.bar(r, hi, h, an, relNow, thru)}${Entry.strip(r, an, hi)}<section class="card"><h2>Hole ${hi + 1} finished: ${a.score} (${toPar(a.score - a.par)})</h2>
+        ${safe ? `<p class="mute">Rules-safe mode is on, so strokes gained for this round unlocks when you finish it.</p>` : `<p class="mute">SG ${sgH(St.meta.view === 'ctx' ? a.sgA : a.sg)} on this hole.</p>${Ch.hole(Object.assign({}, a, { rows: a.rows.map(x => Object.assign(x, { v: St.meta.view === 'ctx' ? x.sgA : x.sg })) }))}`}
+        <div class="row" style="margin-top:12px"><button class="btn" data-act="hole-shots">Edit shots</button>${next}</div></section></div>`;
+      return;
+    }
+    const putt = d.lie === 'green';
+    const par = h.par;
+    const shotNo = editing ? St.active.edit.si + 1 : h.shots.length + 1;
+    const unit = isFt(d.lie) ? 'ft' : 'yd';
+    const q = QUAL[d.lie] || [];
+    const y = yd(d.d, d.lie);
+    const isTee = d.lie === 'tee' && par >= 4;
+    const aims = isTee ? AIM_TEE : y <= 30 ? AIM_ARG : AIM_APP;
+    const types = y <= 30 && d.lie !== 'tee' ? TYPES_ARG : TYPES_FULL;
+    const clubs = St.meta.bag.map(b => [b[0], b[0]]);
+    const green = Entry.greenOf(r, hi);
+    const gps = (act, lab) => `<button class="btn sm gps" data-act="${act}">${GPS_ICON}${lab}</button>`;
+    let html = `<div class="entry">${Entry.bar(r, hi, h, an, relNow, thru, shotNo, editing)}${editing ? '' : Entry.strip(r, an, hi)}`;
+    html += `<div class="modebar"><div class="seg" role="group" aria-label="Entry detail"><button data-act="entry-mode" data-v="quick" aria-pressed="${Q}">Quick</button><button data-act="entry-mode" data-v="full" aria-pressed="${!Q}">Full detail</button></div>${safe ? '<span class="tag watch">Rules-safe</span>' : ''}</div>`;
+    /* BEFORE THE SHOT */
+    const lieExtras = `${q.length ? `<div class="sub">How it's sitting</div>${UI.chips(q, d.q, 'q', { sm: true, label: 'Lie quality' })}` : ''}
+      ${!putt && d.lie !== 'tee' ? `<div class="sub">Stance</div>${UI.chips(SLOPES, d.sl, 'sl', { sm: true, label: 'Stance' })}` : ''}
+      ${putt ? `<div class="sub">Break</div>${UI.chips(BRK, d.brk, 'brk', { sm: true, label: 'Break' })}<div class="sub">Slope</div>${UI.chips(PSLOPE, d.pslope, 'pslope', { sm: true, label: 'Putt slope' })}` : ''}`;
+    html += `<section class="sec"><div class="lab"><h3>${putt ? 'The putt' : 'Lie and distance'}</h3><span class="tiny dim">${editing ? 'editing' : shotNo > 1 ? 'carried from last shot' : ''}</span></div>
+      <div class="distrow"><button class="adj" data-act="adj" data-v="${putt ? -1 : -5}" aria-label="Minus">${putt ? '−1' : '−5'}</button><button class="adj" data-act="adj" data-v="${putt ? -.5 : -1}" aria-label="Minus small">${putt ? '−½' : '−1'}</button>
+      <input id="in-d" type="number" inputmode="decimal" step="any" value="${fin(d.d) ? d.d : ''}" data-num="d" aria-label="Distance to the hole in ${unit === 'ft' ? 'feet' : 'yards'}"><span class="unit">${unit}</span>
+      <button class="adj" data-act="adj" data-v="${putt ? .5 : 1}" aria-label="Plus small">${putt ? '+½' : '+1'}</button><button class="adj" data-act="adj" data-v="${putt ? 1 : 5}" aria-label="Plus">${putt ? '+1' : '+5'}</button></div>
+      ${!putt && d.lie !== 'fringe' && !(d.lie === 'tee' && shotNo === 1) ? `<div class="gpsrow">${green ? gps('gps-d', 'GPS to green') : ''}<button class="btn sm" data-act="mark-green">${green ? 'Re-mark green' : 'Mark green (stand on it)'}</button><span class="tiny dim">${green ? 'distance to green center' : 'mark each green once and GPS fills distances from then on'}</span></div>` : ''}
+      ${putt && !green ? `<div class="gpsrow"><button class="btn sm" data-act="mark-green">${GPS_ICON}Save this green's location</button><span class="tiny dim">next time, GPS gives the distance to it</span></div>` : ''}
+      <div class="sub">Lie</div>${UI.chips(LIES.filter(l => l[0] !== 'tee' || shotNo === 1 || d.lie === 'tee' || (h.shots[shotNo - 2] || {}).pen), d.lie, 'lie', { sm: true, label: 'Lie' })}
+      ${Q ? (lieExtras.trim() ? `<details class="more"><summary>Lie details</summary>${lieExtras}</details>` : '') : lieExtras}
+    </section>`;
+    if (!putt){
+      const w = WIND[d.wd];
+      const plays = !safe && fin(playsLike(d)) && Math.abs(playsLike(d) - d.d) >= 2;
+      const windHTML = `<div class="windbox"><div class="compass" role="group" aria-label="Wind direction">${WIND_POS.map(k => k === 'calm' ? `<button class="calm" data-set="wd" data-v="calm" aria-pressed="${d.wd === 'calm'}">Calm</button>` : `<button data-set="wd" data-v="${k}" aria-pressed="${d.wd === k}" aria-label="${WIND[k].l}" title="${WIND[k].l}">${WIND[k].ar}</button>`).join('')}</div>
+        <div class="side"><div class="small" style="margin-bottom:8px"><b>${w ? w.l : 'Calm'}</b>${w ? `, ${WSPEEDS.find(x => x[0] === d.ws) ? WSPEEDS.find(x => x[0] === d.ws)[1] : d.ws} mph` : ''}</div>${d.wd !== 'calm' ? UI.chips(WSPEEDS.map(([v, l]) => [v, l + ' mph']), d.ws, 'ws', { sm: true, label: 'Wind strength' }) : ''}
+        ${plays ? `<div class="small mute" style="margin-top:8px">Plays like about <b style="color:var(--ink)">${Math.round(playsLike(d))} yds</b></div>` : ''}</div></div>`;
+      const clubSub = `<div class="sub">Club${safe ? '' : ` <span class="dim" style="text-transform:none;letter-spacing:0;font-weight:500">· dot = suggested from your yardages</span>`}</div>${UI.chips(clubs, d.club, 'club', { scroll: true, sugg: safe ? null : d.sugg, label: 'Club' })}`;
+      const planRest = `<div class="sub" style="margin-top:0">Aim</div>${UI.chips(aims, d.aim, 'aim', { sm: true, label: 'Aim' })}
+        <div class="sub">Shot</div>${UI.chips(types, d.type, 'type', { sm: true, label: 'Shot type' })}
+        ${y > 30 || d.lie === 'tee' ? `<div class="sub">Planned shape</div>${UI.chips(SHAPES, d.shape, 'shape', { sm: true, label: 'Planned shape' })}<div class="sub">Trajectory</div>${UI.chips(TRAJ, d.traj, 'traj', { sm: true, label: 'Trajectory' })}` : ''}`;
+      const elevNote = `<div class="fgrid" style="margin-top:6px"><label class="fld">Elevation change (ft, + uphill)<input id="in-elev" type="number" inputmode="decimal" value="${d.elev ?? ''}" data-num="elev"></label><label class="fld">Note<input id="in-note" type="text" value="${esc(d.note || '')}" data-txt="note"></label></div>`;
+      if (Q){
+        html += `<section class="sec"><div class="lab"><h3>The shot</h3></div>${clubSub}
+          <details class="more"><summary>Wind, aim and shape</summary><div class="sub">Wind <span class="dim" style="text-transform:none;letter-spacing:0;font-weight:500">· target is straight up</span></div>${windHTML}${planRest}${elevNote}</details></section>`;
+      } else {
+        html += `<section class="sec"><div class="lab"><h3>Wind</h3><span class="tiny dim">target is straight up</span></div>${windHTML}</section>`;
+        html += `<section class="sec"><div class="lab"><h3>The plan</h3></div>${planRest}${clubSub}
+          <details class="more"${d.elev ? ' open' : ''}><summary>Elevation and notes</summary>${elevNote}</details></section>`;
+      }
+    }
+    /* RESULT */
+    if (putt){
+      html += `<section class="sec"><div class="lab"><h3>Result</h3></div>
+        <button class="btn pri block" data-act="${editing ? 'edit-holed' : 'commit-holed'}" style="min-height:52px">⛳ Holed</button>
+        <div class="sub">Missed</div>${UI.chips(PMISS, d.miss, 'miss', { sm: true, label: 'Miss' })}
+        <div class="sub">Left (feet)</div><div class="row">${[1,2,3,4,6].map(v => `<button class="chip sm" data-act="eft" data-v="${v}" aria-pressed="${d.eD === v && d.eLie === 'green'}">${v}</button>`).join('')}<input id="in-eD" type="number" inputmode="decimal" step="any" style="width:110px" value="${fin(d.eD) ? d.eD : ''}" data-num="eD" aria-label="Feet left"></div>
+      </section>`;
+    } else {
+      const eUnit = isFt(d.eLie) ? 'ft' : 'yds';
+      const extra = `${y > 30 || d.lie === 'tee' ? `<div class="sub">Actual shape</div>${UI.chips(ACT, d.act, 'act', { sm: true, need: !Q, label: 'Actual shape' })}` : ''}
+        <div class="sub">Strike</div>${UI.chips(STRIKE, d.strike, 'strike', { sm: true, label: 'Strike' })}`;
+      html += `<section class="sec"><div class="lab"><h3>Result</h3><span class="tiny dim">relative to where you aimed</span></div>
+        <div class="rgrid" role="group" aria-label="Where it finished relative to the target">${RES.map(([k, l]) => `<button class="${k === 'C' ? 'ctr' : ''}" data-set="dir" data-v="${k}" aria-pressed="${d.dir === k}">${l}</button>`).join('')}</div>
+        <div class="sub">Finished in</div>${UI.chips(LIES.filter(l => l[0] !== 'tee' || d.pen), d.eLie, 'eLie', { sm: true, label: 'Finished in' })}
+        <div class="sub">Distance left (${eUnit})</div><div class="row"><input id="in-eD" type="number" inputmode="decimal" step="any" style="max-width:150px;font-family:var(--display);font-size:24px;font-weight:700" value="${fin(d.eD) ? d.eD : ''}" data-num="eD" aria-label="Distance left">${d.eLie === 'green' ? [3,6,10,15,20,30].map(v => `<button class="chip sm" data-act="eft" data-v="${v}" aria-pressed="${d.eD === v}">${v}</button>`).join('') : green && !isFt(d.eLie) ? gps('gps-e', 'GPS from my ball') : ''}</div>
+        ${Q ? `<details class="more"><summary>Shape and strike</summary>${extra}</details>` : extra}
+        <div class="sub">Penalty</div>${UI.chips(PENS, d.pen, 'pen', { sm: true, bad: true, label: 'Penalty' })}
+        ${(d.pen === 'water' || d.pen === 'unplay') ? `<p class="small mute" style="margin:8px 0 0">Set the lie and distance of your drop above, under Finished in.</p>` : ''}
+        ${isTee ? `<details class="more"${d.drive ? ' open' : ''}><summary>Drive distance</summary><label class="fld" style="margin-top:6px">Total yards, if you know it (for doglegs)<input id="in-drive" type="number" inputmode="numeric" value="${d.drive ?? ''}" data-num="drive"></label></details>` : ''}
+      </section>`;
+    }
+    const endKnown = d.eLie && fin(d.eD);
+    html += `<div id="preview">${endKnown ? Entry.previewHTML(d) : ''}</div>`;
+    html += `</div><div class="actionbar"><div class="in">${editing
+      ? `<button class="btn" data-act="cancel-edit">Cancel</button><button class="btn pri" data-act="save-edit">Save shot</button>`
+      : `<button class="btn" data-act="commit-holed">⛳ Holed</button><button class="btn pri" data-act="commit"${endKnown ? '' : ' aria-disabled="true"'}>Next shot →</button>`}</div></div>`;
+    $('#view').innerHTML = html;
+  },
+  /* green centre for this hole: saved on the round and on the course */
+  courseHole(r, hi){ const c = St.courses[r.courseId]; if (!c) return null; return c.holes[(r.startHole || 1) - 1 + hi] || null; },
+  greenOf(r, hi){ const h = r.holes[hi]; if (h && h.green) return h.green; const ch = Entry.courseHole(r, hi); return ch && ch.green ? ch.green : null; },
+  async gps(which){
+    const r = Entry.round(); if (!r) return;
+    const d = St.active.edit ? St.active.edit.s : Entry.ensure();
+    const g = Entry.greenOf(r, St.active.hole);
+    if (which !== 'mark' && !g) return UI.toast('This green is not mapped yet. Tap Mark green while standing on it.');
+    UI.toast('Getting your position…');
+    let c; try { c = await Geo.get(); } catch (e) { return UI.toast(e.message); }
+    const acc = Math.round((c.accuracy || 0) * 1.094);
+    if (which === 'mark'){
+      const pt = { lat: c.latitude, lng: c.longitude };
+      r.holes[St.active.hole].green = pt; saveRound(r);
+      const ch = Entry.courseHole(r, St.active.hole); if (ch){ ch.green = pt; saveCourse(St.courses[r.courseId]); }
+      App.render(); return UI.toast(`Green ${St.active.hole + (r.startHole || 1)} saved (±${acc} yds).`);
+    }
+    const y = Math.round(Geo.yds({ lat: c.latitude, lng: c.longitude }, g));
+    if (which === 'd'){ d.d = isFt(d.lie) ? y * 3 : y; if (!tm(r) && (!d.club || d.club === d.sugg)){ d.club = Entry.suggestClub(d.d, d.lie, Entry.hole().par); d.sugg = d.club; } }
+    else { if (!d.eLie || isFt(d.eLie)) d.eLie = d.eLie && !isFt(d.eLie) ? d.eLie : 'fairway'; d.eD = y; }
+    saveLocal(); App.render(); UI.toast(`${y} yds to the middle of the green (±${acc} yds)`);
+  },
+  bar(r, hi, h, an, rel, thru, shotNo, editing){
+    const no = hi + (r.startHole || 1);
+    return `<div class="holebar"><button data-act="goto" data-v="${hi - 1}" ${hi <= 0 || editing ? 'disabled' : ''} aria-label="Previous hole">‹</button>
+      <div class="hn"><b>Hole ${no} · Par ${h.par}</b><span>${h.yards ? h.yards + ' yds · ' : ''}SI ${h.si || '—'}${shotNo ? ' · Shot ' + shotNo : ''}${thru.length ? ` · ${toPar(rel)} thru ${thru.length}` : ''}</span></div>
+      <button data-act="hole-shots" aria-label="Shots on this hole" ${editing ? 'disabled' : ''}>≡</button>
+      <button data-act="goto" data-v="${hi + 1}" ${hi >= r.holes.length - 1 || editing ? 'disabled' : ''} aria-label="Next hole">›</button></div>`;
+  },
+  strip(r, an, hi){
+    return `<div class="strip" aria-label="Holes">${r.holes.map((h, i) => { const a = an.holes[i]; return `<button data-act="goto" data-v="${i}" aria-current="${i === hi}"><span>${i + (r.startHole || 1)}</span>${a.done ? UI.sc(a.score, a.par).replace('class="sc', 'style="min-width:20px;height:20px;font-size:12px" class="sc') : `<span style="height:20px;line-height:20px">${h.shots.length ? '…' : '·'}</span>`}</button>`; }).join('')}</div>`;
+  },
+  holeShots(){
+    const r = Entry.round(), hi = St.active.hole, h = r.holes[hi], safe = tm(r);
+    const an = analyzeRound(r).holes[hi];
+    UI.sheet(`<div class="row between"><h2>Hole ${hi + (r.startHole || 1)} shots</h2><button class="btn sm" data-act="close">Close</button></div>
+      ${an.rows.length ? UI.tbl(['#','Club','From','Result', ...(safe ? [] : ['SG']), ''], an.rows.map(x => [x.n, esc(x.club || '—'), Fmt.dist(x.d, x.lie) + ' <span class="dim small">' + esc(LIE[x.lie]) + '</span>', x.holed ? '⛳ Holed' : x.eLie ? Fmt.dist(x.eD, x.eLie) + ' <span class="dim small">' + esc(LIE[x.eLie] || '') + '</span>' + (x.pen ? ' <span class="tag act">+1</span>' : '') : '<span class="dim">in progress</span>', ...(safe ? [] : [sgH(x.sg)]), `<button class="btn sm" data-act="edit-shot" data-r="${r.id}" data-h="${hi}" data-s="${x.idx}">Edit</button>`]), { num: safe ? [] : [4] }) : UI.empty('No shots yet on this hole')}
+      <div class="row" style="margin-top:12px">${h.shots.length ? '<button class="btn warn sm" data-act="undo">Undo last shot</button>' : ''}<button class="btn sm" data-act="end-round">Finish round now</button>${r.tmode ? '<button class="btn sm" data-act="tmode-off">Turn off rules-safe mode</button>' : '<button class="btn sm" data-act="tmode-on">Turn on rules-safe mode</button>'}</div>
+      <p class="small mute" style="margin-bottom:0">${safe ? 'Rules-safe mode hides club suggestions, plays-like yardage and strokes gained until the round is finished, so the app does not analyse your round while you play (Rule 4.3a).' : 'Turn on rules-safe mode for any round played under the Rules of Golf.'}</p>`);
+  }
+};
+
+/* =====================================================================
+   Views
+   ===================================================================== */
+const Views = {
+  filters(){
+    return `<div class="row">${UI.sel('f-scope', [['all','All rounds'],['5','Last 5'],['10','Last 10'],['20','Last 20']], St.meta.scope, 'data-meta="scope" style="width:auto;min-height:40px"')}
+      ${UI.sel('f-type', [['all','All types'],['comp','Tournaments and qualifiers'],['casual','Casual and practice']], St.meta.rtype, 'data-meta="rtype" style="width:auto;min-height:40px"')}
+      ${UI.sel('f-view', [['pga','Standard SG'],['ctx','Context SG']], St.meta.view, 'data-meta="view" style="width:auto;min-height:40px"')}
+      ${UI.sel('f-base', [['tour','vs PGA Tour'],['scratch','vs scratch']], St.meta.base, 'data-meta="base" style="width:auto;min-height:40px"')}</div>`;
+  },
+  exBanner(A){ return A.ex ? `<div class="banner"><div><span class="tag ex">Example data</span> <b style="margin-left:6px">These stats come from seven example rounds.</b><div class="small mute">Your own numbers replace them after your first round.</div></div><a class="btn pri sm" href="#play">Start a round</a></div>` : ''; },
+
+  home(){
+    const A = agg(), real = realRounds();
+    const act = St.active && St.rounds[St.active.rid];
+    const rs = A.rs.filter(r => r.nDone >= 9);
+    const avg = k => mean(rs.map(r => (A.adj ? r.catsA : r.cats)[k] / (r.nDone / 18)));
+    const tot = mean(rs.map(r => (A.adj ? r.sgA : r.sg) / (r.nDone / 18)));
+    const leaks = S.leaks(A).slice(0, 3);
+    const t5 = A.holes.length ? ['double','three','par5bogey','inside150','easyChip'].map(k => sum(A.holes.map(h => h.t5 && h.t5[k] ? 1 : 0)) / A.nR) : [];
+    if (!A.ex){ try { localStorage.setItem('shotlab.summary', JSON.stringify({ updated: Date.now(), baseline: BASE, rounds: rs.length, sgPerRound: { total: tot, OTT: avg('OTT'), APP: avg('APP'), ARG: avg('ARG'), PUTT: avg('PUTT') }, leaks: S.leaks(A).slice(0, 5).map(l => ({ label: l.l, sgPerRound: l.v, shots: l.n, drill: l.tip })) })); } catch (e) {} }
+    const showInstall = isIOS() && !isStandalone() && !localStorage.getItem('shotlab.hideInstall');
+    $('#view').innerHTML = `${showInstall ? `<div class="banner"><div><b>Install Shot Lab on your iPhone</b><div class="small mute">In Safari, tap the Share button, then <b>Add to Home Screen</b>. It then opens full screen and works with no signal.</div></div><button class="btn sm" data-act="hide-install">Got it</button></div>` : ''}
+      ${act ? `<div class="banner"><div><b>Round in progress</b><div class="small mute">${esc(act.course)} · hole ${St.active.hole + (act.startHole || 1)}${tm(act) ? ' · rules-safe' : ''}</div></div><a class="btn pri" href="#play">Resume</a></div>` : ''}
+      ${Views.exBanner(A)}
+      <div class="pagehead"><div><h1>${A.ex ? 'Example player' : 'Your game'}</h1><p>Strokes gained against ${baseName()}, ${A.adj ? 'adjusted for lie, wind and stance' : 'measured the way ShotLink does'}. ${rs.length} round${rs.length === 1 ? '' : 's'} in view.</p></div>${Views.filters()}</div>
+      <div class="kpis" style="margin-bottom:12px">
+        <div class="kpi"><div class="l">SG total / round</div><div class="v">${sgH(tot)}</div><div class="s">vs ${baseShort()}</div></div>
+        ${CATS.map(c => `<div class="kpi"><div class="l">${CATL[c]}</div><div class="v">${sgH(avg(c))}</div><div class="s">per round</div></div>`).join('')}
+        <div class="kpi"><div class="l">Scoring avg</div><div class="v">${fin(mean(rs.filter(r => r.nDone === 18).map(r => r.score))) ? mean(rs.filter(r => r.nDone === 18).map(r => r.score)).toFixed(1) : '—'}</div><div class="s">18-hole rounds</div></div>
+      </div>
+      <div class="cols2">
+        ${UI.card('Biggest leaks', leaks.length ? leaks.map((l, i) => `<div class="leak"><div class="rk">${i + 1}</div><div><div class="row" style="gap:6px"><b>${esc(l.l)}</b><span class="tag ${conf(l.n)}">${conf(l.n)} · ${l.n}</span></div><div class="tip">${esc(l.tip)}</div></div><div>${sgH(l.v)}<div class="tiny mute">per round</div></div></div>`).join('') : UI.empty('No leaks found', 'Every area is at or above the Tour baseline, or there are not enough shots yet.'), 'Ranked by strokes lost per round. <b>act</b> = 15 or more shots; <b>watch</b> = a small sample, keep logging.', '<a class="btn sm" href="#stats-overview">All stats</a>')}
+        ${UI.card('Strokes gained by round', Ch.trend(A.rs, 'total'), 'Each bar is one round; the line is the five-round average.')}
+        ${UI.card('Tiger 5 per round', t5.length ? `<div class="kpis">${[['Double bogeys',0],['Three-putts',1],['Bogeys on par 5s',2],['Bogeys from inside 150',3],['Blown easy chips',4]].map(([l, i]) => `<div class="kpi"><div class="l">${l}</div><div class="v">${t5[i].toFixed(1)}</div></div>`).join('')}</div>` : UI.empty('No completed holes yet'), 'The five mistakes that cost the most strokes. Total them each round and drive the number toward zero.')}
+        ${UI.card('Recent rounds', real.length ? UI.tbl(['Date','Course','Score','SG'], real.slice(0, 6).map(r => { const a = analyzeRound(r); return [esc(r.date), `<a href="#round-${r.id}">${esc(r.course)}</a>`, a.nDone ? `${a.score} <span class="dim">(${toPar(a.toPar)})</span>` : '—', tm(r) ? '<span class="dim">locked</span>' : sgH(St.meta.view === 'ctx' ? a.sgA : a.sg)]; }), { num: [2, 3] }) : UI.empty('No rounds yet', 'Your rounds appear here. Start one from Play.'), '', '<a class="btn sm pri" href="#play">New round</a>')}
+      </div>`;
+  },
+
+  playStart(){
+    const courses = Object.values(St.courses).filter(c => !c.deleted).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    const open = realRounds().filter(r => r.status !== 'done');
+    $('#view').innerHTML = `<div class="pagehead"><div><h1>Play</h1><p>Rounds and tournaments only. Every shot is a few taps: the lie, the conditions, the plan, then where it finished.</p></div></div>
+      <div class="cols">
+        <section class="card"><h3>Start a round</h3><form id="f-start" class="grid" onsubmit="return false">
+          <label class="fld">Course${UI.sel('s-course', courses.map(c => [c.id, c.name + (c.tees ? ' · ' + c.tees : '')]).concat([['new','+ Add a new course']]), courses.length ? courses[0].id : 'new')}</label>
+          <div class="fgrid"><label class="fld">Date<input id="s-date" type="date" value="${today()}"></label><label class="fld">Round type${UI.sel('s-type', ROUND_TYPES, 'casual')}</label></div>
+          <label class="fld">Rules-safe mode${UI.sel('s-tmode', [['off','Off: show SG and suggestions while I play'],['on','On: hide analysis until I finish (tournaments)']], 'off')}</label>
+          <div class="fgrid"><label class="fld">Event (optional)<input id="s-event" type="text" placeholder="e.g. SCGA Amateur"></label><label class="fld">Round number${UI.sel('s-rnd', [['','—'],['1','R1'],['2','R2'],['3','R3'],['4','R4']], '')}</label></div>
+          <div class="fgrid"><label class="fld">Holes${UI.sel('s-holes', [['18','All holes'],['f9','Front 9'],['b9','Back 9']], '18')}</label><label class="fld">Usual wind (mph)${UI.sel('s-ws', WSPEEDS.map(([v, l]) => [v, l]), 3)}</label></div>
+          <div class="fgrid"><label class="fld">Temperature (°F)<input id="s-temp" type="number" inputmode="numeric" value="68"></label><label class="fld">Green speed (Stimp)<input id="s-stimp" type="number" inputmode="decimal" step=".5" value="11"></label><label class="fld">Firmness${UI.sel('s-firm', [['firm','Firm'],['normal','Normal'],['soft','Soft']], 'normal')}</label></div>
+          <button class="btn pri block" data-act="start-round">Start round</button></form></section>
+        <section class="card"><h3>Open rounds</h3>${open.length ? open.map(r => `<div class="row between" style="padding:8px 0;border-bottom:1px solid var(--line)"><div><b>${esc(r.course)}</b><div class="small mute">${esc(r.date)} · ${r.holes.filter(h => h.done).length} holes done</div></div><button class="btn sm pri" data-act="resume" data-v="${r.id}">Resume</button></div>`).join('') : UI.empty('No open rounds', 'A round stays open until you finish it, on any device.')}
+          <h3 style="margin-top:16px">Courses</h3>${courses.length ? courses.map(c => `<div class="row between" style="padding:6px 0;border-bottom:1px solid var(--line)"><span>${esc(c.name)} <span class="dim small">${esc(c.tees || '')} · ${c.holes.length} holes · par ${sum(c.holes.map(h => h.par))} · ${sum(c.holes.map(h => h.yards || 0))} yds${c.holes.some(h => h.green) ? ` · ${c.holes.filter(h => h.green).length} greens mapped` : ''}</span></span><button class="btn sm" data-act="edit-course" data-v="${c.id}">Edit</button></div>`).join('') : '<p class="small mute">Add a course the first time you play it. Par, yardage, stroke index and any greens you mark with GPS are saved for next time.</p>'}
+          <button class="btn sm" style="margin-top:10px" data-act="new-course">+ Add a course</button></section>
+      </div>`;
+  },
+  courseForm(c){
+    c = c || { id: 'c' + uid(), name: '', tees: '', holes: Array.from({ length: 18 }, () => ({ par: 4, yards: null, si: null })) };
+    Views.cdraft = JSON.parse(JSON.stringify(c));
+    const n = c.holes.length;
+    UI.sheet(`<div class="row between"><h2>${St.courses[c.id] ? 'Edit course' : 'Add a course'}</h2><button class="btn sm" data-act="close">Close</button></div>
+      <form id="f-course" data-id="${c.id}" class="grid" style="margin-top:10px" onsubmit="return false"><div class="fgrid"><label class="fld">Course name<input id="c-name" type="text" value="${esc(c.name)}" autocomplete="off"></label><label class="fld">Tees<input id="c-tees" type="text" value="${esc(c.tees || '')}" placeholder="e.g. Blue"></label><label class="fld">Holes${UI.sel('c-n', [['18','18 holes'],['9','9 holes']], String(n), 'data-cn="1"')}</label></div>
+      <p class="small mute" style="margin:0">Enter the yardage of each hole from your tees. The first tee shot of every hole starts from this number, so it decides your off-the-tee strokes gained.</p>
+      ${UI.tbl(['Hole','Par','Yards','SI'], c.holes.map((h, i) => [i + 1, UI.sel('cp' + i, [[3,'3'],[4,'4'],[5,'5']], h.par), `<input id="cy${i}" type="number" inputmode="numeric" value="${h.yards || ''}" placeholder="yds" style="min-width:80px">`, `<input id="cs${i}" type="number" inputmode="numeric" value="${h.si || ''}" style="min-width:60px">`]))}
+      <div class="small mute">Par ${sum(c.holes.map(h => h.par))}${c.holes.some(h => h.green) ? ` · ${c.holes.filter(h => h.green).length} greens mapped with GPS` : ''}</div>
+      <button class="btn pri block" data-act="save-course">Save course</button>${St.courses[c.id] ? `<button class="btn warn sm" data-act="del-course" data-v="${c.id}">Delete course</button>` : ''}</form>`);
+  },
+  readCourseForm(){
+    const f = $('#f-course'); const c = Views.cdraft || { id: f.dataset.id, holes: [] };
+    c.name = $('#c-name').value.trim(); c.tees = $('#c-tees').value.trim();
+    c.holes = c.holes.map((h, i) => ({ ...h, par: +$('#cp' + i).value, yards: +$('#cy' + i).value || null, si: +$('#cs' + i).value || null }));
+    return c;
+  },
+  rounds(){
+    const list = realRounds();
+    $('#view').innerHTML = `<div class="pagehead"><div><h1>Rounds</h1><p>Every round you have logged, newest first. Open one for its scorecard and a hole-by-hole replay.</p></div><a class="btn pri" href="#play">New round</a></div>
+      ${list.length ? `<section class="card">${UI.tbl(['Date','Course','Type','Score','SG total',...CATS,''], list.map(r => { const a = analyzeRound(r); const c = St.meta.view === 'ctx' ? a.catsA : a.cats; return [esc(r.date), `<a href="#round-${r.id}">${esc(r.course)}</a>${r.event ? `<div class="tiny mute">${esc(r.event)}${r.rnd ? ' · R' + r.rnd : ''}</div>` : ''}`, esc((ROUND_TYPES.find(t => t[0] === r.type) || ['', ''])[1]) + (r.status !== 'done' ? ' <span class="tag">open</span>' : ''), a.nDone ? `${a.score} <span class="dim">(${toPar(a.toPar)})</span>` : '—', tm(r) ? '<span class="dim">locked</span>' : sgH(St.meta.view === 'ctx' ? a.sgA : a.sg), ...CATS.map(k => tm(r) ? '' : sgH(c[k])), `<a class="btn sm" href="#round-${r.id}">Open</a>`]; }), { num: [3,4,5,6,7,8] })}</section>`
+        : UI.empty('No rounds yet', 'Start your first round from Play. The stats pages show example data until then.')}`;
+  },
+  round(id){
+    let r = St.rounds[id]; if (!r && /^ex/.test(id)) r = Example.rounds().find(x => x.id === id);
+    if (!r) return $('#view').innerHTML = UI.empty('Round not found');
+    if (tm(r)){ const a0 = analyzeRound(r); $('#view').innerHTML = `<div class="pagehead"><div><h1>${esc(r.course)}</h1><p>${esc(r.date)} · in progress · ${a0.nDone} holes, ${a0.nDone ? toPar(a0.toPar) : 'E'}</p></div><button class="btn pri" data-act="resume" data-v="${r.id}">Resume</button></div>${UI.empty('Rules-safe mode is on for this round', 'Strokes gained and the hole-by-hole replay unlock when you finish the round, so the app never analyses a round while you are playing it.')}`; return; }
+    const a = analyzeRound(r), adj = St.meta.view === 'ctx';
+    a.rows.forEach(x => x.v = adj ? x.sgA : x.sg);
+    const cats = adj ? a.catsA : a.cats;
+    if (!Views.hsel || Views.hsel.rid !== id) Views.hsel = { rid: id, h: (a.holes.find(h => h.rows.length) || { hole: 1 }).hole };
+    Views.hsel.h = clamp(Views.hsel.h, 1, a.holes.length || 1);
+    const hs = a.holes[Views.hsel.h - 1];
+    const sorted = a.rows.filter(x => fin(x.v)).slice().sort((p, q) => p.v - q.v);
+    const t5 = ['double','three','par5bogey','inside150','easyChip'].map(k => a.holes.filter(h => h.done && h.t5 && h.t5[k]).length);
+    const fwA = a.holes.filter(h => h.done && h.fir !== null && h.fir !== undefined), girA = a.holes.filter(h => h.done);
+    const half = (from, to) => a.holes.slice(from, to);
+    const scRow = (lab, f) => `<tr><td>${lab}</td>${a.holes.map(f).join('')}</tr>`;
+    const card = `<div class="tw"><table class="scard"><thead><tr><th>Hole</th>${a.holes.map(h => `<th>${h.hole}</th>`).join('')}<th>Tot</th></tr></thead><tbody>
+      ${scRow('Par', h => `<td>${h.par}</td>`).replace('</tr>', `<td>${sum(a.holes.map(h => h.par))}</td></tr>`)}
+      <tr><td><b>Score</b></td>${a.holes.map(h => `<td><button class="btn sm" style="min-height:34px;min-width:34px;padding:0;border:0;background:none" data-act="hsel" data-v="${h.hole}">${h.done ? UI.sc(h.score, h.par) : h.n ? '…' : '·'}</button></td>`).join('')}<td><b>${a.score || '—'}</b></td></tr>
+      ${scRow('Putts', h => `<td>${h.done ? h.putts : ''}</td>`).replace('</tr>', `<td>${sum(a.holes.filter(h => h.done).map(h => h.putts))}</td></tr>`)}
+      ${scRow('SG', h => `<td class="small">${h.rows.length ? `<span class="sg ${(adj ? h.sgA : h.sg) >= 0 ? 'pos' : 'neg'}">${sgT(adj ? h.sgA : h.sg, 1)}</span>` : ''}</td>`).replace('</tr>', `<td>${sgH(adj ? a.sgA : a.sg, 1)}</td></tr>`)}
+      </tbody></table></div>`;
+    $('#view').innerHTML = `<div class="pagehead"><div><h1>${esc(r.course)}</h1><p>${esc(r.date)} · ${esc((ROUND_TYPES.find(t => t[0] === r.type) || ['', ''])[1])}${r.event ? ' · ' + esc(r.event) + (r.rnd ? ' R' + r.rnd : '') : ''}${r.ex ? ' · <span class="tag ex">Example</span>' : ''}</p></div>
+        <div class="row">${Views.filters().replace(/<select id="f-scope"[\s\S]*?<\/select>|<select id="f-type"[\s\S]*?<\/select>/g, '')}${!r.ex ? `${r.status !== 'done' ? `<button class="btn pri" data-act="resume" data-v="${r.id}">Resume</button>` : ''}<button class="btn warn sm" data-act="del-round" data-v="${r.id}">Delete</button>` : ''}</div></div>
+      <div class="kpis" style="margin-bottom:12px">
+        <div class="kpi"><div class="l">Score</div><div class="v">${a.score || '—'}</div><div class="s">${a.nDone} holes · ${toPar(a.toPar)}</div></div>
+        <div class="kpi"><div class="l">SG total</div><div class="v">${sgH(adj ? a.sgA : a.sg)}</div><div class="s">vs ${baseShort()}</div></div>
+        ${CATS.map(c => `<div class="kpi"><div class="l">${CATL[c]}</div><div class="v">${sgH(cats[c])}</div></div>`).join('')}
+        <div class="kpi"><div class="l">Fairways</div><div class="v">${fwA.filter(h => h.fir).length}/${fwA.length}</div></div>
+        <div class="kpi"><div class="l">Greens</div><div class="v">${girA.filter(h => h.gir).length}/${girA.length}</div></div>
+        <div class="kpi"><div class="l">Putts</div><div class="v">${sum(girA.map(h => h.putts))}</div></div>
+        <div class="kpi"><div class="l">Tiger 5</div><div class="v">${sum(t5)}</div><div class="s">${t5.join(' · ')}</div></div>
+      </div>
+      <section class="card" style="margin-bottom:12px"><h3>Scorecard</h3>${card}<p class="why">Circles are birdies, squares are bogeys. Tap a score to see that hole below. Front ${sum(half(0, 9).filter(h => h.done).map(h => h.score)) || '—'} · Back ${sum(half(9, 18).filter(h => h.done).map(h => h.score)) || '—'}</p></section>
+      <div class="cols2">
+        ${UI.card(`Hole ${hs.hole} · par ${hs.par}${hs.done ? ` · ${hs.score} (${toPar(hs.score - hs.par)})` : ''}`, Ch.hole(hs) + (hs.rows.length ? UI.tbl(['#','Club','From','Plan','Result','SG',''], hs.rows.map(x => [x.n, esc(x.club || ''), Fmt.dist(x.d, x.lie) + `<div class="tiny mute">${esc(LIE[x.lie])}${x.q && x.q !== 'good' ? ', ' + esc((QUAL[x.lie].find(q => q[0] === x.q) || ['', ''])[1].toLowerCase()) : ''}${x.wd && x.wd !== 'calm' ? ' · ' + WIND[x.wd].ar + ' ' + x.ws + 'mph' : ''}</div>`, x.lie === 'green' ? esc((BRK.find(b => b[0] === x.brk) || ['', ''])[1]) : esc([(AIM_APP.concat(AIM_TEE, AIM_ARG).find(z => z[0] === x.aim) || ['', ''])[1], x.shape].filter(Boolean).join(', ')), x.holed ? '⛳ Holed' : (Fmt.dist(x.eD, x.eLie) + `<div class="tiny mute">${esc(LIE[x.eLie] || '')}${x.dir ? ' · ' + RESL[x.dir].toLowerCase() : ''}${x.miss ? ' · ' + x.miss : ''}${x.actS && x.act !== 'asplan' ? ' · ' + x.actS : ''}</div>`) + (x.pen ? ' <span class="tag act">+1</span>' : ''), sgH(x.v), r.ex ? '' : `<button class="btn sm" data-act="edit-shot" data-r="${r.id}" data-h="${hs.hole - 1}" data-s="${x.idx}">Edit</button>`]), { num: [5] }) : ''), 'Lines are colored by strokes gained; curves show the actual shape. The green panel shows each putt.', `<div class="row"><button class="btn sm" data-act="hsel" data-v="${Math.max(1, hs.hole - 1)}" aria-label="Previous hole">‹</button><button class="btn sm" data-act="hsel" data-v="${Math.min(a.holes.length, hs.hole + 1)}" aria-label="Next hole">›</button></div>`)}
+        <div class="grid">
+          ${UI.card('Where the round was won and lost', Ch.bars(CATS.map(c => ({ l: CATL[c], v: cats[c], n: a.rows.filter(x => x.cat === c).length }))), `Round total ${sgT(adj ? a.sgA : a.sg)} against ${baseName()}.`)}
+          ${UI.card('Best and worst shots', `<h3 style="margin:0 0 6px">Best</h3>${UI.tbl(['Hole','Shot','SG'], sorted.slice(-3).reverse().map(x => [x.hole, `${esc(x.club || '')} from ${Fmt.dist(x.d, x.lie)} ${esc((LIE[x.lie] || '').toLowerCase())} → ${x.holed ? 'holed' : Fmt.dist(x.eD, x.eLie)}`, sgH(x.v)]), { num: [2] })}<h3 style="margin:12px 0 6px">Worst</h3>${UI.tbl(['Hole','Shot','SG'], sorted.slice(0, 3).map(x => [x.hole, `${esc(x.club || '')} from ${Fmt.dist(x.d, x.lie)} ${esc((LIE[x.lie] || '').toLowerCase())} → ${x.holed ? 'holed' : x.pen ? PENS.find(p => p[0] === x.pen)[1] : Fmt.dist(x.eD, x.eLie)}`, sgH(x.v)]), { num: [2] })}`)}
+          ${r.ex ? '' : UI.card('Round notes', `<textarea id="r-notes" data-rnote="${r.id}" placeholder="What decided this round?">${esc(r.notes || '')}</textarea>`)}
+        </div>
+      </div>`;
+  },
+
+  /* ---------------- stats ---------------- */
+  STATS: [['overview','Overview'],['driving','Driving'],['approach','Approach'],['short','Short game'],['putting','Putting'],['scoring','Scoring'],['clubs','Clubs and shapes'],['conditions','Conditions']],
+  stats(sec){
+    sec = Views.STATS.some(s => s[0] === sec) ? sec : 'overview';
+    const A = agg();
+    const head = `${Views.exBanner(A)}<div class="pagehead"><div><h1>${Views.STATS.find(s => s[0] === sec)[1]}</h1><p>${A.rs.length} round${A.rs.length === 1 ? '' : 's'} · ${A.rows.length} shots · ${A.adj ? 'Context SG (lie, wind and stance adjusted)' : 'Standard SG'} vs ${baseShort()}</p></div>${Views.filters()}</div>
+      <nav class="subnav">${Views.STATS.map(([k, l]) => `<a href="#stats-${k}" aria-current="${k === sec ? 'page' : 'false'}">${l}</a>`).join('')}</nav>`;
+    if (!A.rows.length){ $('#view').innerHTML = head + UI.empty('No rounds match these filters'); return; }
+    $('#view').innerHTML = head + Views['st_' + sec](A);
+  },
+  st_overview(A){
+    const { rs, rows, holes, nR } = A;
+    const c = k => sum(rows.filter(x => x.cat === k).map(x => x.v)) / nR;
+    const fir = S.rate(holes.map(h => h.fir)), gir = S.rate(holes.map(h => h.gir)), scr = S.rate(holes.filter(h => !h.gir).map(h => h.scr)), sand = S.rate(holes.map(h => h.sand));
+    const putts = sum(holes.map(h => h.putts)) / nR;
+    const great = rows.filter(x => x.v >= .5).length / nR, poor = rows.filter(x => x.v <= -.5).length / nR;
+    const leaks = S.leaks(A).slice(0, 8);
+    const kp = (l, v, s, good) => `<div class="kpi"><div class="l">${l}</div><div class="v" style="${good === true ? 'color:var(--gain)' : good === false ? 'color:var(--loss)' : ''}">${v}</div><div class="s">${s}</div></div>`;
+    return `<div class="kpis" style="margin-bottom:12px">
+        ${kp('SG total', sgH(c('OTT') + c('APP') + c('ARG') + c('PUTT')), 'per round')}${kp('Tee to green', sgH(c('OTT') + c('APP') + c('ARG')), 'OTT + APP + ARG')}${kp('Ball striking', sgH(c('OTT') + c('APP')), 'OTT + APP')}
+        ${CATS.map(k => kp(CATL[k], sgH(c(k)), 'per round')).join('')}</div>
+      <div class="cols2">
+        ${UI.card('Strokes gained by category', Ch.bars(CATS.map(k => ({ l: CATL[k], v: c(k), n: rows.filter(x => x.cat === k).length }))), 'Per round, against the Tour baseline. Zero is a Tour-average player.')}
+        ${UI.card('Traditional stats vs Tour', `<div class="kpis">${kp('Fairways', pct(fir.r), `${fir.k}/${fir.n} · Tour ${pct(TOUR.fir)}`, fir.r >= TOUR.fir)}${kp('Greens in reg.', pct(gir.r), `${gir.k}/${gir.n} · Tour ${pct(TOUR.gir)}`, gir.r >= TOUR.gir)}${kp('Scrambling', pct(scr.r), `${scr.k}/${scr.n} · Tour ${pct(TOUR.scr)}`, scr.r >= TOUR.scr)}${kp('Sand saves', pct(sand.r), `${sand.k}/${sand.n} · Tour ${pct(TOUR.sand)}`, sand.r >= TOUR.sand)}${kp('Putts / round', fin(putts) ? putts.toFixed(1) : '—', `Tour ${TOUR.putts}`, putts <= TOUR.putts)}${kp('Great shots', great.toFixed(1), 'per round, SG ≥ +0.5')}${kp('Poor shots', poor.toFixed(1), 'per round, SG ≤ −0.5')}</div>`, 'Green numbers are at Tour average or better. Tour figures are approximate season averages.')}
+        ${UI.card('Leaks, ranked', leaks.length ? leaks.map((l, i) => `<div class="leak"><div class="rk">${i + 1}</div><div><div class="row" style="gap:6px"><b>${esc(l.l)}</b><span class="tag ${conf(l.n)}">${conf(l.n)} · ${l.n}</span></div><div class="tip">${esc(l.tip)}</div></div><div>${sgH(l.v)}<div class="tiny mute">per round</div></div></div>`).join('') : UI.empty('No leaks found'), 'Every group of shots that loses strokes against the Tour, worst first.')}
+        <div class="grid">${UI.card('Total by round', Ch.trend(rs, 'total'))}${UI.card('Approach by round', Ch.trend(rs, 'APP'))}${UI.card('Putting by round', Ch.trend(rs, 'PUTT'))}</div>
+      </div>`;
+  },
+  st_driving(A){
+    const { rows, holes, nR } = A;
+    const tee = rows.filter(x => x.cat === 'OTT');
+    const th = holes.filter(h => h.tee);
+    const share = k => th.length ? th.filter(h => h.tee === k).length / th.length : NaN;
+    const drv = tee.filter(x => x.club === 'Dr' && x.eLie && x.eLie !== 'hole' && !x.pen).map(x => fin(x.drive) ? x.drive : x.d - x.eYd).filter(fin);
+    const resOf = x => x.pen ? 'pen' : x.eLie === 'fairway' ? 'fw' : x.eLie === 'fw_bunker' ? 'bunker' : x.eLie === 'recovery' ? 'trouble' : ['first_cut','rough','deep_rough'].includes(x.eLie) ? (lateral(x.dir) < 0 ? 'lrough' : lateral(x.dir) > 0 ? 'rrough' : 'rough') : 'other';
+    const RL = { fw: 'Fairway', lrough: 'Left rough', rrough: 'Right rough', rough: 'Rough', bunker: 'Fairway bunker', trouble: 'Trees / trouble', pen: 'Penalty', other: 'Other' };
+    const drs = tee.map(x => ({ dist: x.pen ? NaN : fin(x.drive) ? x.drive : x.eLie && x.eLie !== 'hole' ? x.d - x.eYd : NaN, res: resOf(x), side: lateral(x.dir) || 1, v: x.v, club: x.club, hole: x.hole, date: x.date, label: RL[resOf(x)] }));
+    const byRes = Object.keys(RL).map(k => { const a = tee.filter(x => resOf(x) === k); return { l: RL[k], v: mean(a.map(x => x.v)), n: a.length }; });
+    const byClub = [...groupBy(tee, x => x.club || '—')].map(([k, a]) => ({ l: k, v: sum(a.map(x => x.v)) / nR, n: a.length }));
+    const byShape = [...groupBy(tee.filter(x => x.actS), x => x.actS)].map(([k, a]) => ({ l: k, v: mean(a.map(x => x.v)), n: a.length, fw: a.filter(x => x.eLie === 'fairway').length / a.length }));
+    return `<div class="kpis" style="margin-bottom:12px">
+        <div class="kpi"><div class="l">SG off the tee</div><div class="v">${sgH(sum(tee.map(x => x.v)) / nR)}</div><div class="s">per round</div></div>
+        <div class="kpi"><div class="l">Driving distance</div><div class="v">${drv.length ? Math.round(mean(drv)) : '—'}</div><div class="s">yds, driver · Tour ≈ ${TOUR.drive}</div></div>
+        <div class="kpi"><div class="l">Longest</div><div class="v">${drv.length ? Math.round(Math.max(...drv)) : '—'}</div><div class="s">yds</div></div>
+        <div class="kpi"><div class="l">Fairways</div><div class="v">${pct(share('fw'))}</div><div class="s">Tour ${pct(TOUR.fir)}</div></div>
+        <div class="kpi"><div class="l">Left rough</div><div class="v">${pct(share('lrough'))}</div><div class="s">tendency</div></div>
+        <div class="kpi"><div class="l">Right rough</div><div class="v">${pct(share('rrough'))}</div><div class="s">tendency</div></div>
+        <div class="kpi"><div class="l">Fairway bunker</div><div class="v">${pct(share('bunker'))}</div><div class="s">tendency</div></div>
+        <div class="kpi"><div class="l">Trouble or penalty</div><div class="v">${pct((share('trouble') || 0) + (share('pen') || 0))}</div></div>
+      </div>
+      <div class="cols2">
+        ${UI.card('Every tee shot', Ch.drives(drs), 'Each dot is one tee shot on a par 4 or 5. Height is distance; left and right show where it finished.')}
+        <div class="grid">
+          ${UI.card('Strokes gained by result', Ch.bars(byRes, { label: 'SG by tee result', unit: 'per shot' }), 'Average SG per tee shot for each outcome. The gap between fairway and each miss is what that miss costs.')}
+          ${UI.card('By club', Ch.bars(byClub, { label: 'SG by club off the tee' }), 'Total per round with each club off the tee.')}
+          ${UI.card('By actual shape', byShape.length ? UI.tbl(['Shape','Shots','Fairway %','SG / shot'], byShape.map(s => [esc(s.l), s.n, pct(s.fw), sgH(s.v)]), { num: [1,2,3] }) : UI.empty('No shapes logged yet'), 'Which tee shot finds the most fairways and gains the most.')}
+        </div>
+      </div>`;
+  },
+  st_approach(A){
+    const { rows, holes, nR } = A;
+    const app = rows.filter(x => x.cat === 'APP' && x.aim !== 'layup' && x.type !== 'layup' && x.aim !== 'out');
+    const bands = [[50,75],[75,100],[100,125],[125,150],[150,175],[175,200],[200,225],[225,250],[250,999]];
+    const fwy = x => ['fairway','first_cut','tee'].includes(x.lie), rgh = x => ['rough','deep_rough'].includes(x.lie);
+    const onG = x => x.eLie === 'green' || x.holed;
+    const prox = x => x.holed ? 0 : x.eD;
+    const pb = (f, tab) => bands.map(([a, b]) => { const s = app.filter(x => x.yd >= a && x.yd < b && f(x) && onG(x)); return { l: b > 900 ? a + '+' : a + '–' + b, n: s.length, v: mean(s.map(prox)), tour: I(tab, b > 900 ? 265 : (a + b) / 2) }; });
+    const gir = S.rate(holes.map(h => h.gir));
+    const girBy = (f) => S.rate(holes.filter(h => h.att && f(h.att)).map(h => h.gir));
+    const table = bands.map(([a, b]) => { const s = app.filter(x => x.yd >= a && x.yd < b); const f = s.filter(fwy), r = s.filter(rgh); return [b > 900 ? a + '+ yds' : `${a}–${b} yds`, s.length, sgH(sum(s.map(x => x.v)) / nR), sgH(mean(s.map(x => x.v)), 3), pct(s.filter(onG).length / (s.length || 1)), f.filter(onG).length ? Fmt.ft(mean(f.filter(onG).map(prox))) : '—', r.filter(onG).length ? Fmt.ft(mean(r.filter(onG).map(prox))) : '—']; });
+    const aimRows = [['pin','At the pin'],['middle','Middle of green'],['left','Left of pin'],['right','Right of pin'],['short','Below the hole']].map(([k, l]) => { const a = app.filter(x => x.aim === k); return { l, v: mean(a.map(x => x.v)), n: a.length }; });
+    const lieRows = [['fairway','Fairway'],['first_cut','First cut'],['rough','Rough'],['deep_rough','Deep rough'],['fw_bunker','Fairway bunker'],['recovery','Trees / recovery'],['tee','Tee (par 3)']].map(([k, l]) => { const a = app.filter(x => x.lie === k); return { l, v: mean(a.map(x => x.v)), n: a.length }; });
+    const allP = app.filter(onG);
+    return `<div class="kpis" style="margin-bottom:12px">
+        <div class="kpi"><div class="l">SG approach</div><div class="v">${sgH(sum(rows.filter(x => x.cat === 'APP').map(x => x.v)) / nR)}</div><div class="s">per round</div></div>
+        <div class="kpi"><div class="l">Greens in reg.</div><div class="v">${pct(gir.r)}</div><div class="s">Tour ${pct(TOUR.gir)}</div></div>
+        <div class="kpi"><div class="l">GIR from fairway</div><div class="v">${pct(girBy(t => ['fairway','first_cut','tee'].includes(t.lie)).r)}</div></div>
+        <div class="kpi"><div class="l">GIR from rough</div><div class="v">${pct(girBy(t => ['rough','deep_rough'].includes(t.lie)).r)}</div></div>
+        <div class="kpi"><div class="l">GIR from bunker</div><div class="v">${pct(girBy(t => t.lie === 'fw_bunker').r)}</div></div>
+        <div class="kpi"><div class="l">GIR inside 100</div><div class="v">${pct(girBy(t => t.yd < 100).r)}</div></div>
+        <div class="kpi"><div class="l">Proximity</div><div class="v">${allP.length ? Math.round(mean(allP.map(prox))) + '′' : '—'}</div><div class="s">all approaches on the green</div></div>
+      </div>
+      <div class="cols2">
+        ${UI.card('Proximity from the fairway', Ch.prox(pb(fwy, TOUR_PROX_FW)), 'Average feet from the hole for approaches that finish on the green, against an estimated Tour number for each band.')}
+        ${UI.card('Proximity from the rough', Ch.prox(pb(rgh, TOUR_PROX_RGH)), 'The same, from rough and deep rough.')}
+        ${UI.card('Where approaches finish', Ch.green(app), 'Share of approaches in each zone relative to your target, with the average SG of each. A crowded right column means a right miss.')}
+        <div class="grid">${UI.card('By aim', Ch.bars(aimRows, { label: 'SG by aim' }), 'Average SG per shot by what you aimed at. Tells you whether flag-hunting pays.')}${UI.card('By lie', Ch.bars(lieRows, { label: 'SG by approach lie' }), 'Average SG per shot from each lie.')}</div>
+      </div>
+      <section class="card" style="margin-top:12px"><h3>Approach by distance</h3>${UI.tbl(['Distance','Shots','SG / round','SG / shot','Green hit','Prox. fairway','Prox. rough'], table, { num: [1,2,3,4,5,6] })}<p class="why">Layups and punch-outs are left out, as on the PGA Tour.</p></section>`;
+  },
+  st_short(A){
+    const { rows, holes, nR } = A;
+    const arg = rows.filter(x => x.cat === 'ARG');
+    const scr = S.rate(holes.filter(h => !h.gir).map(h => h.scr)), sand = S.rate(holes.map(h => h.sand)), ud = S.rate(holes.filter(h => h.udAtt).map(h => h.ud));
+    const lieG = l => ['rough','deep_rough','first_cut'].includes(l) ? 'Rough' : l === 'gs_bunker' || l === 'fw_bunker' ? 'Sand' : l === 'fringe' ? 'Fringe' : l === 'fairway' ? 'Fairway' : 'Other';
+    const scrBy = ['Fairway','Rough','Sand','Fringe'].map(k => { const a = holes.filter(h => !h.gir && h.scrLie && lieG(h.scrLie) === k); return [k, `${pct(S.rate(a.map(h => h.scr)).r)} <span class="dim">(${a.filter(h => h.scr).length}/${a.length})</span>`]; });
+    const scrD = [[0,10],[10,20],[20,30],[30,999]].map(([a, b]) => { const s = holes.filter(h => !h.gir && fin(h.scrYd) && h.scrYd >= a && h.scrYd < b); return [b > 900 ? '30+ yds' : `${a}–${b} yds`, `${pct(S.rate(s.map(h => h.scr)).r)} <span class="dim">(${s.filter(h => h.scr).length}/${s.length})</span>`]; });
+    const pBy = ['Fairway','Rough','Sand','Fringe'].map(k => { const a = arg.filter(x => lieG(x.lie) === k && (x.eLie === 'green' || x.holed)); return { l: k, n: a.length, p: mean(a.map(x => x.holed ? 0 : x.eD)), v: mean(arg.filter(x => lieG(x.lie) === k).map(x => x.v)) }; });
+    const byType = [...groupBy(arg, x => x.type || 'other')].map(([k, a]) => ({ l: (TYPES_ARG.find(t => t[0] === k) || [k, k])[1], v: mean(a.map(x => x.v)), n: a.length }));
+    const byQ = [...groupBy(arg.filter(x => x.q), x => x.lie + '|' + x.q)].map(([k, a]) => { const [l, q] = k.split('|'); return { l: `${LIE[l]}: ${((QUAL[l] || []).find(z => z[0] === q) || ['', q])[1].toLowerCase()}`, v: mean(a.map(x => x.v)), n: a.length }; }).sort((a, b) => b.n - a.n).slice(0, 10);
+    return `<div class="kpis" style="margin-bottom:12px">
+        <div class="kpi"><div class="l">SG around green</div><div class="v">${sgH(sum(arg.map(x => x.v)) / nR)}</div><div class="s">per round</div></div>
+        <div class="kpi"><div class="l">Scrambling</div><div class="v">${pct(scr.r)}</div><div class="s">${scr.k}/${scr.n} · Tour ${pct(TOUR.scr)}</div></div>
+        <div class="kpi"><div class="l">Sand saves</div><div class="v">${pct(sand.r)}</div><div class="s">${sand.k}/${sand.n} · Tour ${pct(TOUR.sand)}</div></div>
+        <div class="kpi"><div class="l">Up and down</div><div class="v">${pct(ud.r)}</div><div class="s">from inside 30 yds</div></div>
+      </div>
+      <div class="cols2">
+        <section class="card"><h3>Scrambling</h3><div class="cols">${UI.tbl(['From','Rate'], scrBy, { num: [1] })}${UI.tbl(['Distance','Rate'], scrD, { num: [1] })}</div><p class="why">Par or better after missing the green, by the lie and distance of the first shot after the miss.</p></section>
+        ${UI.card('Proximity by lie', UI.tbl(['Lie','Shots','Average leave','SG / shot'], pBy.map(p => [p.l, p.n, p.n ? Fmt.ft(p.p) : '—', sgH(p.v, 3)]), { num: [1,2,3] }), 'Feet from the hole for short-game shots that finished on the green or in.')}
+        ${UI.card('By shot type', Ch.bars(byType, { label: 'SG by short game shot' }), 'Average SG per shot.')}
+        ${UI.card('By how the ball was sitting', Ch.bars(byQ, { lw: 210, label: 'SG by lie quality' }), 'Average SG per shot for each lie condition you logged.')}
+      </div>`;
+  },
+  st_putting(A){
+    const { rows, holes, nR } = A;
+    const p = rows.filter(x => x.cat === 'PUTT');
+    const bands = [[0,3,'0–3'],[3,5,'3–5'],[5,7,'5–7'],[7,10,'7–10'],[10,15,'10–15'],[15,20,'15–20'],[20,25,'20–25'],[25,35,'25–35'],[35,999,'35+']].map(([a, b, l]) => { const s = p.filter(x => x.d >= a && x.d < b); return { l, n: s.length, make: s.filter(x => x.holed).length / (s.length || 1), tour: mean(s.map(x => I(TOUR_MAKE, x.d))), sg: mean(s.map(x => x.v)), tot: sum(s.map(x => x.v)) / nR }; });
+    const gh = holes.filter(h => h.gir);
+    const first = [...groupBy(p, x => x.rid + '|' + x.hole).values()].map(a => a[0]);
+    const lag = first.filter(x => x.d >= 25);
+    const leaves = lag.filter(x => !x.holed).map(x => x.eD);
+    const miss = p.filter(x => !x.holed && x.miss);
+    const mshare = k => miss.length ? miss.filter(x => x.miss === k).length / miss.length : NaN;
+    const brk = ['lr','rl','straight','double'].map(k => { const a = p.filter(x => x.brk === k && x.d >= 3 && x.d <= 15); return { l: BRK.find(b => b[0] === k)[1], v: mean(a.map(x => x.v)), n: a.length, make: a.filter(x => x.holed).length / (a.length || 1) }; });
+    const slope = ['up','flat','down'].map(k => { const a = p.filter(x => x.pslope === k); return { l: PSLOPE.find(b => b[0] === k)[1], v: mean(a.map(x => x.v)), n: a.length }; });
+    return `<div class="kpis" style="margin-bottom:12px">
+        <div class="kpi"><div class="l">SG putting</div><div class="v">${sgH(sum(p.map(x => x.v)) / nR)}</div><div class="s">per round</div></div>
+        <div class="kpi"><div class="l">Putts / round</div><div class="v">${(sum(holes.map(h => h.putts)) / nR).toFixed(1)}</div><div class="s">Tour ${TOUR.putts}</div></div>
+        <div class="kpi"><div class="l">Putts per GIR</div><div class="v">${gh.length ? (sum(gh.map(h => h.putts)) / gh.length).toFixed(2) : '—'}</div><div class="s">Tour ${TOUR.puttsGir}</div></div>
+        <div class="kpi"><div class="l">One-putts</div><div class="v">${pct(holes.filter(h => h.putts === 1).length / (holes.filter(h => h.putts).length || 1))}</div><div class="s">Tour ${pct(TOUR.onePutt)}</div></div>
+        <div class="kpi"><div class="l">Three-putts</div><div class="v">${pct(holes.filter(h => h.putts >= 3).length / (holes.length || 1))}</div><div class="s">of holes · Tour ${pct(TOUR.threePutt)}</div></div>
+        <div class="kpi"><div class="l">Lag leave (25+ ft)</div><div class="v">${leaves.length ? Fmt.ft(mean(leaves)) : '—'}</div><div class="s">${pct(leaves.filter(v => v <= 3).length / (lag.length || 1))} inside 3 ft</div></div>
+      </div>
+      <div class="cols2">
+        ${UI.card('Make rate by distance', Ch.makes(bands), 'Your make rate in each band against an estimated Tour make rate (blue line).')}
+        ${UI.card('Strokes gained by distance', UI.tbl(['Feet','Putts','Holed','Tour','SG / putt','SG / round'], bands.map(b => [b.l, b.n, b.n ? pct(b.make) : '—', b.n ? pct(b.tour) : '—', b.n ? sgH(b.sg, 3) : '—', b.n ? sgH(b.tot) : '—']), { num: [1,2,3,4,5] }), 'Where your putting gains and loses, band by band.')}
+        ${UI.card('How you miss', `<div class="kpis">${PMISS.map(([k, l]) => `<div class="kpi"><div class="l">${l}</div><div class="v">${pct(mshare(k))}</div></div>`).join('')}</div>`, `${miss.length} missed putts with a miss logged. More high-side than low-side misses means you are giving putts enough break.`)}
+        <div class="grid">${UI.card('By break, 3–15 ft', UI.tbl(['Break','Putts','Holed','SG / putt'], brk.map(b => [b.l, b.n, b.n ? pct(b.make) : '—', b.n ? sgH(b.v, 3) : '—']), { num: [1,2,3] }))}${UI.card('By slope', Ch.bars(slope, { label: 'SG by putt slope' }), 'Average SG per putt.')}</div>
+      </div>`;
+  },
+  st_scoring(A){
+    const { holes, rs, nR } = A;
+    const byPar = p => { const a = holes.filter(h => h.par === p); return { n: a.length, avg: mean(a.map(h => h.score)), sg: mean(a.map(h => A.adj ? h.sgA : h.sg)) }; };
+    const dist = k => holes.length ? holes.filter(h => k(h.rel)).length / holes.length : NaN;
+    const bbA = sum(rs.map(r => r.bbA)), bbS = sum(rs.map(r => r.bbS));
+    const gh = holes.filter(h => h.gir);
+    const go = holes.filter(h => h.go !== undefined);
+    const t5 = [['Double bogeys','double'],['Three-putts','three'],['Bogeys on par 5s','par5bogey'],['Bogeys from inside 150','inside150'],['Blown easy chips','easyChip']].map(([l, k]) => [l, (sum(holes.map(h => h.t5 && h.t5[k] ? 1 : 0)) / nR).toFixed(2)]);
+    const full = rs.filter(r => r.nDone === 18);
+    return `<div class="kpis" style="margin-bottom:12px">
+        <div class="kpi"><div class="l">Scoring avg</div><div class="v">${full.length ? mean(full.map(r => r.score)).toFixed(1) : '—'}</div><div class="s">${full.length} full rounds · Tour ≈ ${TOUR.score}</div></div>
+        ${[3,4,5].map(p => { const b = byPar(p); return `<div class="kpi"><div class="l">Par ${p} avg</div><div class="v">${fin(b.avg) ? b.avg.toFixed(2) : '—'}</div><div class="s">Tour ${TOUR['p' + p]} · ${b.n} holes</div></div>`; }).join('')}
+        <div class="kpi"><div class="l">Birdie or better</div><div class="v">${pct(dist(v => v <= -1))}</div><div class="s">Tour ${pct(TOUR.birdie)}</div></div>
+        <div class="kpi"><div class="l">Bogey or worse</div><div class="v">${pct(dist(v => v >= 1))}</div><div class="s">Tour ${pct(TOUR.bogeyAv)}</div></div>
+        <div class="kpi"><div class="l">Bounce back</div><div class="v">${bbA ? pct(bbS / bbA) : '—'}</div><div class="s">birdie after a bogey · Tour ${pct(TOUR.bounce)}</div></div>
+        <div class="kpi"><div class="l">Birdie conversion</div><div class="v">${gh.length ? pct(gh.filter(h => h.rel <= -1).length / gh.length) : '—'}</div><div class="s">birdie or better on GIR holes</div></div>
+      </div>
+      <div class="cols2">
+        ${UI.card('Score distribution', `<div class="kpis">${[['Eagle or better', v => v <= -2], ['Birdie', v => v === -1], ['Par', v => v === 0], ['Bogey', v => v === 1], ['Double or worse', v => v >= 2]].map(([l, f]) => `<div class="kpi"><div class="l">${l}</div><div class="v">${pct(dist(f))}</div><div class="s">${holes.filter(h => f(h.rel)).length} holes</div></div>`).join('')}</div>`, 'Share of all completed holes.')}
+        ${UI.card('Tiger 5, per round', UI.tbl(['Mistake','Per round'], t5, { num: [1] }), 'Scott Fawcett’s Tiger 5. Most strokes between a +5 and a Tour player hide in these five.')}
+        ${UI.card('By par', UI.tbl(['Par','Holes','Average','vs par','SG / hole'], [3,4,5].map(p => { const b = byPar(p); return [p, b.n, fin(b.avg) ? b.avg.toFixed(2) : '—', fin(b.avg) ? (b.avg - p >= 0 ? '+' : MINUS) + Math.abs(b.avg - p).toFixed(2) : '—', sgH(b.sg)]; }), { num: [1,2,3,4] }))}
+        ${UI.card('Par 5s: going for it', go.length ? UI.tbl(['','Holes','Average score','Birdie+'], [['Went for the green', go.filter(h => h.go)], ['Laid up', go.filter(h => !h.go)]].map(([l, a]) => [l, a.length, a.length ? mean(a.map(h => h.score)).toFixed(2) : '—', a.length ? pct(a.filter(h => h.rel <= -1).length / a.length) : '—']), { num: [1,2,3] }) : UI.empty('No par 5 second shots yet'), 'Second shots on par 5s marked Lay up count as layups; everything else is going for it.')}
+      </div>`;
+  },
+  st_clubs(A){
+    const { rows, nR } = A;
+    const full = rows.filter(x => x.lie !== 'green' && x.club && x.club !== 'Putter');
+    const order = St.meta.bag.map(b => b[0]);
+    const byClub = [...groupBy(full, x => x.club)].sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0]));
+    const tbl = byClub.map(([c, a]) => { const m = a.filter(x => x.dir); const L = m.filter(x => lateral(x.dir) < 0).length, R = m.filter(x => lateral(x.dir) > 0).length, Lg = m.filter(x => depthOf(x.dir) > 0).length, Sh = m.filter(x => depthOf(x.dir) < 0).length;
+      return [`<b>${esc(c)}</b>`, a.length, sgH(sum(a.map(x => x.v)) / nR), sgH(mean(a.map(x => x.v)), 3), m.length ? pct(m.filter(x => x.dir === 'C').length / m.length) : '—', m.length ? `${pct(L / m.length)} / ${pct(R / m.length)}` : '—', m.length ? `${pct(Sh / m.length)} / ${pct(Lg / m.length)}` : '—']; });
+    const planned = full.filter(x => x.shape && x.act && x.yd > 30);
+    const groups = [...groupBy(planned, x => x.cg)];
+    const habit = groups.map(([g, a]) => { const SH = ['draw','straight','fade','hook','slice','push','pull']; return [`<b>${esc(g)}</b>`, a.length, ...['draw','straight','fade'].map(int => { const b = a.filter(x => x.shape === int); if (!b.length) return '<span class="dim">·</span>'; const ok = b.filter(x => x.act === 'asplan' || x.act === int); const top = [...groupBy(b.filter(x => !(x.act === 'asplan' || x.act === int)), x => x.act)].sort((p, q) => q[1].length - p[1].length)[0]; return `${pct(ok.length / b.length)} on plan<div class="tiny mute">${b.length} planned${top ? ` · misses: ${top[0]}` : ''}</div>`; })]; });
+    const actSG = [...groupBy(planned, x => x.cg + '|' + (x.act === 'asplan' || x.act === x.shape ? 'planned' : 'not'))];
+    const cmp = groups.map(([g]) => { const ok = (actSG.find(z => z[0] === g + '|planned') || [0, []])[1], no = (actSG.find(z => z[0] === g + '|not') || [0, []])[1]; return { l: g, ok: mean(ok.map(x => x.v)), no: mean(no.map(x => x.v)), nOk: ok.length, nNo: no.length }; });
+    const strike = [...groupBy(full.filter(x => x.strike), x => x.strike)].map(([k, a]) => ({ l: STRIKE.find(s => s[0] === k)[1], v: mean(a.map(x => x.v)), n: a.length }));
+    return `<section class="card" style="margin-bottom:12px"><h3>Strokes gained by club</h3>${UI.tbl(['Club','Shots','SG / round','SG / shot','On target','Miss left / right','Short / long'], tbl, { num: [1,2,3,4,5,6] })}<p class="why">Every full and short-game shot with each club. Misses are relative to where you aimed.</p></section>
+      <div class="cols2">
+        ${UI.card('Planned shape vs what happened', habit.length ? UI.tbl(['Clubs','Shots','Draw','Straight','Fade'], habit, { num: [1] }) : UI.empty('No planned shapes yet', 'Pick the planned and actual shape on full shots.'), 'How often the shape you planned is the shape you hit, and what the miss usually is.')}
+        ${UI.card('What a shape miss costs', cmp.length ? UI.tbl(['Clubs','On plan','Off plan','Cost / shot'], cmp.map(c => [esc(c.l), `${sgH(c.ok, 3)} <span class="dim">(${c.nOk})</span>`, `${sgH(c.no, 3)} <span class="dim">(${c.nNo})</span>`, fin(c.ok) && fin(c.no) ? sgH(c.no - c.ok, 3) : '—']), { num: [1,2,3] }) : UI.empty('No planned shapes yet'), 'Average SG per shot when the ball did what you planned versus when it did not, with the same clubs.')}
+        ${UI.card('By strike', Ch.bars(strike, { label: 'SG by strike' }), 'Average SG per shot for each strike you logged.')}
+      </div>`;
+  },
+  st_conditions(A){
+    const { rows } = A;
+    const full = rows.filter(x => x.lie !== 'green' && x.yd > 30);
+    const wb = [['Calm', x => x.wd === 'calm' || !x.ws || x.ws <= 3], ['5–10 mph', x => x.wd !== 'calm' && x.ws > 3 && x.ws <= 9], ['10–15 mph', x => x.wd !== 'calm' && x.ws > 9 && x.ws <= 14], ['15+ mph', x => x.wd !== 'calm' && x.ws > 14]].map(([l, f]) => { const a = full.filter(f); return { l, v: mean(a.map(x => x.v)), n: a.length }; });
+    const wd = [['Into', ['H']], ['Into, crossing', ['HL','HR']], ['Crosswind', ['L','R']], ['Helping, crossing', ['TL','TR']], ['Helping', ['T']]].map(([l, ks]) => { const a = full.filter(x => ks.includes(x.wd) && x.ws > 3); return { l, v: mean(a.map(x => x.v)), n: a.length }; });
+    const lr = [['Left to right', ['L','HL','TL']], ['Right to left', ['R','HR','TR']]].map(([l, ks]) => { const a = full.filter(x => ks.includes(x.wd) && x.ws > 3); return { l, v: mean(a.map(x => x.v)), n: a.length, miss: a.filter(x => x.dir).length ? `${pct(a.filter(x => lateral(x.dir) < 0).length / a.filter(x => x.dir).length)} L · ${pct(a.filter(x => lateral(x.dir) > 0).length / a.filter(x => x.dir).length)} R` : '—' }; });
+    const sl = SLOPES.map(([k, l]) => { const a = full.filter(x => x.sl === k && x.lie !== 'tee'); return { l, v: mean(a.map(x => x.v)), n: a.length }; });
+    const q = [...groupBy(rows.filter(x => x.q && x.lie !== 'green'), x => x.lie + '|' + x.q)].map(([k, a]) => { const [lie, qq] = k.split('|'); return { l: `${LIE[lie]}: ${((QUAL[lie] || []).find(z => z[0] === qq) || ['', qq])[1].toLowerCase()}`, v: mean(a.map(x => x.v)), n: a.length }; }).sort((a, b) => b.n - a.n).slice(0, 12);
+    return `<div class="banner" style="background:var(--base-soft);border-color:var(--base)"><div class="small">${A.adj ? 'Context SG is on: these numbers already allow for the lie, wind and stance, so they show how well you handled each condition.' : 'PGA Tour SG is on: these numbers include the extra difficulty of each condition. Switch to Context SG to see how well you handled them.'}</div></div>
+      <div class="cols2">
+        ${UI.card('By wind strength', Ch.bars(wb, { label: 'SG by wind strength' }), 'Average SG per full shot (over 30 yds).')}
+        ${UI.card('By wind direction', Ch.bars(wd, { label: 'SG by wind direction' }), 'Average SG per full shot with more than 5 mph of wind.')}
+        ${UI.card('Crosswinds', UI.tbl(['Wind','Shots','SG / shot','Misses'], lr.map(w => [w.l, w.n, sgH(w.v, 3), w.miss]), { num: [1,2] }), 'Whether you hold the ball against the wind or let it ride.')}
+        ${UI.card('By stance', Ch.bars(sl, { label: 'SG by stance' }), 'Average SG per full shot off the tee box.')}
+        ${UI.card('By lie condition', Ch.bars(q, { lw: 220, label: 'SG by lie condition' }), 'Average SG per shot for each lie and how the ball was sitting.')}
+      </div>`;
+  },
+
+  log(){
+    const A = agg();
+    const f = Views.logF || (Views.logF = { cat: '', club: '', lie: '' });
+    let rows = A.rows;
+    if (f.cat) rows = rows.filter(x => x.cat === f.cat); if (f.club) rows = rows.filter(x => x.club === f.club); if (f.lie) rows = rows.filter(x => x.lie === f.lie);
+    const clubs = [...new Set(A.rows.map(x => x.club).filter(Boolean))];
+    const show = rows.slice().reverse().slice(0, 400);
+    $('#view').innerHTML = `${Views.exBanner(A)}<div class="pagehead"><div><h1>Shot log</h1><p>Every shot with its context and strokes gained. ${rows.length} shots match; newest first.</p></div>${Views.filters()}</div>
+      <div class="row" style="margin-bottom:12px">${UI.sel('lf-cat', [['','All categories'], ...CATS.map(c => [c, CATL[c]])], f.cat, 'data-logf="cat" style="width:auto"')}${UI.sel('lf-club', [['','All clubs'], ...clubs.map(c => [c, c])], f.club, 'data-logf="club" style="width:auto"')}${UI.sel('lf-lie', [['','All lies'], ...LIES], f.lie, 'data-logf="lie" style="width:auto"')}</div>
+      <section class="card">${show.length ? UI.tbl(['Date','H','#','Club','From','Lie / wind','Plan','Result','SG','Ctx SG'], show.map(x => [esc((x.date || '').slice(5)), x.hole, x.n, esc(x.club || ''), Fmt.dist(x.d, x.lie), `${esc(LIE[x.lie])}${x.q && x.q !== 'good' ? `, ${esc(((QUAL[x.lie] || []).find(q => q[0] === x.q) || ['', ''])[1].toLowerCase())}` : ''}${x.sl && x.sl !== 'flat' ? `, ${esc(SLOPES.find(s => s[0] === x.sl)[1].toLowerCase())}` : ''}${x.wd && x.wd !== 'calm' ? ` · ${WIND[x.wd].ar} ${x.ws}` : ''}`, esc([x.shape, (AIM_APP.concat(AIM_TEE, AIM_ARG).find(z => z[0] === x.aim) || ['', ''])[1].toLowerCase()].filter(Boolean).join(', ')), x.holed ? '⛳' : `${Fmt.dist(x.eD, x.eLie)} <span class="dim">${esc((LIE[x.eLie] || '').toLowerCase())}${x.dir ? ', ' + RESL[x.dir].toLowerCase() : ''}${x.actS && x.act !== 'asplan' ? ', ' + x.actS : ''}</span>${x.pen ? ' <span class="tag act">+1</span>' : ''}`, sgH(x.sg), sgH(x.sgA)]), { num: [8, 9] }) : UI.empty('No shots match')}${rows.length > 400 ? '<p class="why">Showing the newest 400.</p>' : ''}</section>`;
+  },
+
+  setup(){
+    const real = realRounds();
+    const sc = Sync.cfg || {};
+    const last = sc.last ? new Date(sc.last).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : null;
+    $('#view').innerHTML = `<div class="pagehead"><div><h1>Setup</h1><p>Your bag, how strokes gained is measured, syncing between devices and your data.</p></div></div>
+      <div class="cols">
+        <section class="card"><h3>Strokes gained</h3>
+          <div class="sub" style="margin-top:0">Baseline</div>${UI.chips([['tour','PGA Tour'],['scratch','Scratch golfer']], St.meta.base, 'meta:base', { label: 'Baseline' })}
+          <p class="small mute">Zero means you played like a Tour-average player, or like a scratch golfer. The scratch baseline is an estimate about 4.5 strokes a round behind the Tour.</p>
+          <div class="sub">Method</div>${UI.chips([['pga','Standard SG'],['ctx','Context SG']], St.meta.view, 'meta:view', { label: 'SG view' })}
+          <p class="small mute"><b style="color:var(--ink)">Standard SG</b> uses only distance and lie type, exactly like ShotLink, so it compares directly with Tour numbers. <b style="color:var(--ink)">Context SG</b> also allows for how the ball was sitting, your stance, the wind and elevation. Both are always stored.</p><a class="btn sm" href="#how">How it works</a></section>
+        <section class="card"><h3>On the course</h3>
+          <div class="sub" style="margin-top:0">Shot entry</div>${UI.chips([['quick','Quick'],['full','Full detail']], St.meta.entry, 'meta:entry', { label: 'Shot entry' })}
+          <p class="small mute"><b style="color:var(--ink)">Quick</b> asks only for club, lie, distance and where it finished; wind, plan, shape and strike fold away. <b style="color:var(--ink)">Full detail</b> asks for everything, which is what the shape-habit stats need. You can switch on any shot.</p>
+          <div class="sub">Display</div>${UI.chips([['auto','Match iPhone'],['light','Light'],['dark','Dark'],['sun','Sunlight']], St.meta.theme, 'meta:theme', { label: 'Theme' })}
+          <p class="small mute"><b style="color:var(--ink)">Sunlight</b> is maximum contrast for bright days.</p>
+          <div class="sub">Screen</div>${UI.chips([['on','Keep awake during a round'],['off','Normal']], St.meta.wake === false ? 'off' : 'on', 'meta:wake', { label: 'Keep screen awake' })}</section>
+        <section class="card"><h3>Sync between phone and laptop</h3>
+          ${Sync.on() ? `<p class="small"><span class="tag ${Sync.state === 'err' ? 'act' : ''}">${Sync.state === 'err' ? esc(Sync.msg) : 'Connected'}</span> ${last ? `Last synced ${esc(last)}.` : ''}</p>
+            <p class="small mute">Rounds, courses and settings sync through a private GitHub gist. Connect every device with the same token.</p>
+            <div class="row"><button class="btn pri sm" data-act="sync-now">Sync now</button><button class="btn sm warn" data-act="sync-off">Disconnect this device</button></div>`
+          : `<p class="small mute">Optional. Without it, everything is saved on this device only. With it, rounds logged on your phone show up on your laptop and back up to your GitHub account.</p>
+            <ol class="small mute" style="padding-left:18px;margin:6px 0 10px"><li>On github.com go to Settings → Developer settings → Personal access tokens → <b>Tokens (classic)</b> → Generate new token.</li><li>Name it "Shot Lab", tick only the <b>gist</b> box, choose no expiration, generate, copy it.</li><li>Paste it below on each device.</li></ol>
+            <label class="fld">GitHub token<input id="sync-token" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ghp_…"></label>
+            <button class="btn pri block" style="margin-top:8px" data-act="sync-connect">Connect</button>`}
+          <p class="why">The token is stored only on this device and is never included in exports.</p></section>
+        <section class="card"><h3>Your bag</h3><form id="f-bag" onsubmit="return false">${UI.tbl(['Club','Carry','Total'], St.meta.bag.filter(b => b[0] !== 'Putter').map((b, i) => [`<input id="bn${i}" type="text" value="${esc(b[0])}" style="min-width:64px">`, `<input id="bc${i}" type="number" inputmode="numeric" value="${b[1]}" style="min-width:70px">`, `<input id="bt${i}" type="number" inputmode="numeric" value="${b[2]}" style="min-width:70px">`]))}<button class="btn pri block" style="margin-top:10px" data-act="save-bag">Save bag</button></form><p class="why">Used to suggest a club from the distance. Suggestions are hidden in rules-safe rounds.</p></section>
+        <section class="card"><h3>Your data</h3><p class="small mute">${real.length} round${real.length === 1 ? '' : 's'} and ${Object.values(St.courses).filter(c => !c.deleted).length} course${Object.values(St.courses).filter(c => !c.deleted).length === 1 ? '' : 's'} saved on this device.</p>
+          <div class="grid"><button class="btn block" data-act="export">Back up everything (JSON)</button><button class="btn block" data-act="export-csv">Export every shot (CSV for Excel or Sheets)</button>
+          <label class="btn block" for="imp-file" style="cursor:pointer">Restore or merge a backup<input id="imp-file" type="file" accept=".json,application/json" hidden></label></div>
+          <p class="why">Restoring merges: the newest version of each round wins, nothing is deleted.</p></section>
+        <section class="card"><h3>App</h3><p class="small mute">Shot Lab ${APP_VERSION} · ${isStandalone() ? 'running as a Home Screen app' : 'running in the browser'} · ${navigator.onLine ? 'online' : 'offline'}</p>
+          <button class="btn sm" data-act="check-update">Check for update</button>
+          ${!isStandalone() ? `<p class="small mute" style="margin-top:10px">To install on iPhone: open this page in Safari, tap Share, then <b>Add to Home Screen</b>.</p>` : ''}</section>
+      </div>`;
+  },
+  how(){
+    $('#view').innerHTML = `<div class="howto"><div class="pagehead"><div><h1>How Shot Lab works</h1></div></div>
+      <h2>Strokes gained</h2><p>Every spot on a course has an <b>expected number of strokes to hole out</b> for a Tour player. From 150 yards in the fairway that is about ${E(150, 'fairway').toFixed(2)}; from 8 feet on the green about ${E(8, 'green').toFixed(2)}. A shot's strokes gained is how much it improved your position, minus the stroke it cost:</p>
+      <p class="formula">SG = expected(before) − expected(after) − 1</p>
+      <p>Holed shots leave an expected value of 0. A penalty costs one extra stroke. Each shot starts exactly where the previous one finished, so a hole's shots always add up to <b>expected(tee) − your score</b>, and a round's total is the sum of its shots.</p>
+      <p>Categories follow the PGA Tour: <b>off the tee</b> is tee shots on par 4s and 5s; <b>approach</b> is every other shot from more than 30 yards, par-3 tee shots included; <b>around the green</b> is inside 30 yards off the green; <b>putting</b> is on the green.</p>
+      <h2>PGA Tour SG and Context SG</h2><p><b>PGA Tour SG</b> uses distance and lie type only (tee, fairway, rough, sand, recovery, green). That is how ShotLink does it, so your numbers compare directly with Tour players. First cut sits halfway between fairway and rough; deep rough adds part of the gap to recovery; fringe uses the better of fairway and a putt.</p>
+      <p><b>Context SG</b> adds what you log before the shot. The wind and elevation change the distance the shot plays (about 1% longer per mph into the wind, 0.5% shorter per mph helping, and one yard per three feet of elevation). How the ball is sitting and your stance add difficulty: a flyer lie, a ball sitting down, a plugged bunker lie or a downhill stance raise the expected strokes, a ball sitting up lowers them. Breaking and downhill putts count as harder. These adjustments are estimates; they let you see whether you handled a hard shot well, not only whether it went close.</p>
+      <h2>What the stats mean</h2><ul>
+        <li><b>Fairways</b>: tee shots on par 4s and 5s that finish on the short grass. First cut counts as a miss, as on Tour.</li>
+        <li><b>Greens in regulation</b>: on the green with two strokes or more to spare, penalties counted.</li>
+        <li><b>Proximity</b>: feet from the hole for approaches that finish on the green. Layups and punch-outs are left out.</li>
+        <li><b>Scrambling</b>: par or better after missing the green. <b>Sand saves</b>: up and down in two from a greenside bunker.</li>
+        <li><b>Tiger 5</b>: double bogeys, three-putts, bogeys on par 5s, bogeys with an approach from inside 150 yards, and needing three or more from an easy chip inside 20 yards.</li>
+        <li><b>Leaks</b> need 15 or more shots before they are marked <b>act</b>; below that they are <b>watch</b>.</li></ul>
+      <h2>Tour numbers</h2><p>The expected-strokes tables, make rates, proximity numbers and traditional stats are approximations of published PGA Tour averages, not official ShotLink data.</p>
+      <h2>Baselines</h2><p>The <b>PGA Tour</b> baseline uses approximate Tour averages. The <b>scratch</b> baseline adds an estimated gap that grows with distance, worth about 4.5 strokes over a typical round, so you can see where you already play at scratch level and where you lose to it.</p>
+      <h2>Rules-safe mode</h2><p>Under Rule 4.3a you may record statistics during a round, but a device must not process or interpret playing information from that round, recommend a club, or give plays-like distances that allow for elevation. With rules-safe mode on, Shot Lab hides club suggestions, plays-like yardage and all strokes gained for the round in progress until you finish it. GPS distance to the middle of the green stays on, because plain distance is allowed (unless a Local Rule bans distance devices). Check the terms of each competition.</p>
+      <h2>GPS distances</h2><p>Stand on a green and tap <b>Mark green</b> once. The location is saved with the course, so next time <b>GPS to green</b> fills in the distance to the middle of that green from wherever you stand. Accuracy is usually 3 to 10 yards. Use your rangefinder or a sprinkler head when it matters more.</p>
+      <h2>Your data</h2><p>Every tap saves on this device straight away, in two places (local storage and IndexedDB), so a round survives a dead signal or a closed app. Turn on sync in Setup to share rounds between your phone and laptop through a private GitHub gist, and use <b>Back up everything</b> now and then.</p>
+      <h2>For your other apps</h2><p>Each time Home is opened, Shot Lab writes a short summary (SG per round by category and your top five leaks with drills) to <code>localStorage['shotlab.summary']</code>. Any other app hosted on the same GitHub Pages site can read it.</p></div>`;
+  }
+};
+
+/* =====================================================================
+   App: routing + events
+   ===================================================================== */
+const App = {
+  render(){
+    try {
+      BASE = St.meta.base === 'scratch' ? 'scratch' : 'tour';
+      const h = (location.hash || '#home').slice(1);
+      const [page, ...rest] = h.split('-'); const arg = rest.join('-');
+      Wake.want(page === 'play' && !!(St.active && St.rounds[St.active.rid]) && St.meta.wake !== false);
+      document.querySelectorAll('nav.tabs a').forEach(a => { const p = a.getAttribute('href').slice(1).split('-')[0]; a.setAttribute('aria-current', p === page || (page === 'round' && p === 'rounds') ? 'page' : 'false'); });
+      if (page === 'play') return St.active && St.rounds[St.active.rid] ? Entry.render() : Views.playStart();
+      if (page === 'rounds') return Views.rounds();
+      if (page === 'round') return Views.round(arg);
+      if (page === 'stats') return Views.stats(arg);
+      if (page === 'log') return Views.log();
+      if (page === 'setup') return Views.setup();
+      if (page === 'how') return Views.how();
+      return Views.home();
+    } catch (e){ console.error(e); $('#view').innerHTML = UI.empty('This page hit an error', e.message); }
+  },
+  startRound(){
+    const cid = $('#s-course').value; if (cid === 'new') return Views.courseForm();
+    const c = St.courses[cid]; if (!c) return UI.toast('Add a course first.');
+    const missing = c.holes.findIndex(h => !h.yards); if (missing >= 0){ Views.courseForm(c); return UI.toast(`Add the yardage for hole ${missing + 1} first.`); }
+    let which = $('#s-holes').value; if (c.holes.length < 18 && which !== '18') which = '18';
+    const holes = c.holes.map(h => ({ par: h.par, yards: h.yards, si: h.si, shots: [], done: false }));
+    const sel = which === 'f9' ? holes.slice(0, 9) : which === 'b9' ? holes.slice(9) : holes;
+    const r = { id: 'r' + uid(), created: Date.now(), date: $('#s-date').value || today(), course: c.name, tees: c.tees, courseId: c.id, type: $('#s-type').value, event: $('#s-event').value.trim(), rnd: $('#s-rnd').value,
+      tmode: $('#s-tmode').value === 'on', startHole: which === 'b9' ? 10 : 1, weather: { ws: +$('#s-ws').value, wd: 'calm', temp: +$('#s-temp').value || null, stimp: +$('#s-stimp').value || null, firm: $('#s-firm').value }, holes: sel, status: 'open' };
+    saveRound(r); St.active = { rid: r.id, hole: 0, draft: null }; Entry.ensure(); saveLocal(); App.render(); window.scrollTo({ top: 0 });
+  },
+  init(){
+    loadLocal(); Sync.load(); applyTheme();
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+    document.addEventListener('click', e => {
+      const t = e.target.closest('[data-set],[data-act]'); if (!t) return;
+      if (t.dataset.set){
+        const f = t.dataset.set;
+        if (f.startsWith('meta:')){ const k = f.slice(5); St.meta[k] = k === 'wake' ? t.dataset.v === 'on' : t.dataset.v; saveMeta(); if (k === 'theme') applyTheme(); App.render(); return; }
+        Entry.set(f, t.dataset.v); return;
+      }
+      const a = t.dataset.act, v = t.dataset.v;
+      const act = {
+        'start-round': App.startRound,
+        'new-course': () => Views.courseForm(),
+        'edit-course': () => Views.courseForm(St.courses[v]),
+        'save-course': () => { const c = Views.readCourseForm(); if (!c.name) return UI.toast('Give the course a name.'); const miss = c.holes.findIndex(h => !h.yards); if (miss >= 0){ UI.toast(`Enter the yardage for hole ${miss + 1}.`); const el = $('#cy' + miss); if (el) el.focus(); return; } saveCourse(c); UI.close(); App.render(); UI.toast('Course saved'); const s = $('#s-course'); if (s) s.value = c.id; },
+        'del-course': () => { const c = St.courses[v]; if (!c) return; c.deleted = true; saveCourse(c); UI.close(); App.render(); UI.toast('Course deleted. Its rounds are kept.'); },
+        'entry-mode': () => { St.meta.entry = v; saveMeta(); App.render(); },
+        'gps-d': () => Entry.gps('d'), 'gps-e': () => Entry.gps('e'), 'mark-green': () => Entry.gps('mark'),
+        'tmode-on': () => { const r = Entry.round(); r.tmode = true; saveRound(r); if (St.active.draft && St.active.draft.club === St.active.draft.sugg){ St.active.draft.sugg = null; } UI.close(); App.render(); UI.toast('Rules-safe mode on'); },
+        'tmode-off': () => { const r = Entry.round(); r.tmode = false; saveRound(r); UI.close(); App.render(); UI.toast('Rules-safe mode off'); },
+        'hide-install': () => { try { localStorage.setItem('shotlab.hideInstall', '1'); } catch (_){ } App.render(); },
+        'sync-connect': async () => { const tok = ($('#sync-token').value || '').trim(); if (!tok) return UI.toast('Paste your GitHub token first.'); UI.toast('Connecting…'); try { await Sync.connect(tok); UI.toast(Sync.state === 'ok' ? 'Sync is on' : (Sync.msg || 'Saved. Will sync when online.')); } catch (err){ Sync.cfg = null; Sync.saveCfg(); Sync.setState('local'); UI.toast(err.status === 401 ? 'GitHub rejected that token.' : err.status === 403 ? 'That token needs the gist permission.' : 'Could not reach GitHub. Check your connection.'); } App.render(); },
+        'sync-now': () => Sync.now(),
+        'sync-off': () => { Sync.disconnect(); App.render(); UI.toast('This device is no longer syncing. Its data stays here.'); },
+        'export-csv': () => exportFile(`shotlab-shots-${today()}.csv`, shotsCSV(), 'text/csv'),
+        'check-update': async () => { if (!App.swReg) return UI.toast('Updates load automatically when you open the app online.'); UI.toast('Checking…'); try { await App.swReg.update(); setTimeout(() => { if (!App.waiting) UI.toast('You have the latest version.'); }, 2500); } catch (_){ UI.toast('Could not check right now.'); } },
+        'apply-update': () => { if (App.waiting) App.waiting.postMessage('skipWaiting'); else location.reload(); },
+        'close': UI.close,
+        'resume': () => { const r = St.rounds[v]; if (!r) return; r.status = 'open'; const hi = Math.max(0, r.holes.findIndex(h => !h.done)); St.active = { rid: r.id, hole: hi, draft: null }; Entry.ensure(); saveRound(r); location.hash = '#play'; App.render(); },
+        'commit': () => Entry.commit(false),
+        'commit-holed': () => { if (St.active && St.active.edit) return act['edit-holed'](); Entry.commit(true); },
+        'edit-holed': () => { const d = St.active.edit.s; d.holed = true; d.miss = null; Entry.saveEdit(); },
+        'save-edit': Entry.saveEdit,
+        'cancel-edit': () => { const b = St.active.edit.back; const r = St.rounds[St.active.edit.rid]; St.active.edit = null; Entry.restore(r); saveLocal(); location.hash = b || '#play'; App.render(); },
+        'adj': () => { const d = St.active.edit ? St.active.edit.s : Entry.ensure(); d.d = r1(Math.max(0, (d.d || 0) + +v)); if (!tm(Entry.round()) && (d.lie === 'tee' || !d.club || d.club === d.sugg)){ const h = Entry.hole(); d.club = Entry.suggestClub(d.d, d.lie, h ? h.par : 4); d.sugg = d.club; } saveLocal(); App.render(); },
+        'eft': () => { const d = St.active.edit ? St.active.edit.s : Entry.ensure(); d.eD = +v; if (!d.eLie || d.lie === 'green') d.eLie = 'green'; d.holed = false; saveLocal(); App.render(); },
+        'goto': () => Entry.goto(+v),
+        'hole-shots': Entry.holeShots,
+        'undo': Entry.undo,
+        'edit-shot': () => Entry.startEdit(t.dataset.r, +t.dataset.h, +t.dataset.s),
+        'end-round': () => { const r = Entry.round(); r.status = 'done'; saveRound(r); St.active = null; saveLocal(); UI.close(); location.hash = '#round-' + r.id; },
+        'hsel': () => { Views.hsel.h = +v; App.render(); },
+        'del-round': () => UI.sheet(`<h2>Delete this round?</h2><p class="mute">It is removed from your stats on every device.</p><div class="row" style="justify-content:flex-end"><button class="btn" data-act="close">Cancel</button><button class="btn warn" data-act="del-round-yes" data-v="${v}">Delete round</button></div>`),
+        'del-round-yes': () => { const r = St.rounds[v]; if (r){ r.deleted = true; saveRound(r); if (St.active && St.active.rid === v) St.active = null; saveLocal(); } UI.close(); location.hash = '#rounds'; App.render(); UI.toast('Round deleted'); },
+        'save-bag': () => { const bag = St.meta.bag.filter(b => b[0] !== 'Putter').map((b, i) => [$('#bn' + i).value.trim() || b[0], +$('#bc' + i).value || b[1], +$('#bt' + i).value || b[2]]); bag.push(['Putter', 0, 0]); St.meta.bag = bag; saveMeta(); UI.toast('Bag saved'); },
+        'export': () => exportFile(`shotlab-backup-${today()}.json`, JSON.stringify({ app: 'shotlab', v: 3, exported: new Date().toISOString(), rounds: St.rounds, courses: St.courses, meta: St.meta }), 'application/json')
+      }[a];
+      if (act){ e.preventDefault(); if (t.getAttribute('aria-disabled') === 'true' && a === 'commit'){ UI.toast('Pick where the ball finished and the distance left.'); return; } try { act(); } catch (err){ console.error(err); UI.toast('Something went wrong: ' + err.message); } }
+    });
+    document.addEventListener('input', e => {
+      const t = e.target;
+      if (t.dataset.num){ const d = St.active && St.active.edit ? St.active.edit.s : Entry.ensure(); if (!d) return; Entry.typing = true; const n = parseFloat(t.value); d[t.dataset.num] = isFinite(n) ? n : null; if (t.dataset.num === 'eD' && d.lie === 'green' && !d.eLie) d.eLie = 'green'; saveLocal(); Entry.liveUpdate(); }
+      else if (t.dataset.txt){ const d = St.active && St.active.edit ? St.active.edit.s : Entry.ensure(); if (d){ d[t.dataset.txt] = t.value; saveLocal(); } }
+    });
+    document.addEventListener('change', e => {
+      const t = e.target;
+      if (t.dataset.num){ Entry.typing = false; const d = St.active && St.active.edit ? St.active.edit.s : Entry.ensure(); Entry.liveUpdate();
+        /* re-render a moment later, so the tap on Next that caused this blur still lands */
+        if (t.dataset.num === 'd' && d){ if (d.club === d.sugg && !tm(Entry.round())){ const h = Entry.hole(); d.club = Entry.suggestClub(d.d, d.lie, h ? h.par : 4); d.sugg = d.club; } clearTimeout(Entry.rt); Entry.rt = setTimeout(() => { const ae = document.activeElement; if (!ae || !ae.dataset || !ae.dataset.num) App.render(); }, 400); }
+        return; }
+      if (t.dataset.meta){ St.meta[t.dataset.meta] = t.value; saveMeta(); App.render(); return; }
+      if (t.dataset.logf){ Views.logF[t.dataset.logf] = t.value; App.render(); return; }
+      if (t.dataset.rnote){ const r = St.rounds[t.dataset.rnote]; if (r){ r.notes = t.value; saveRound(r); UI.toast('Notes saved'); } return; }
+      if (t.id === 's-course' && t.value === 'new') Views.courseForm();
+      if (t.id === 's-type'){ const m = $('#s-tmode'); if (m) m.value = ['tournament','qualifier'].includes(t.value) ? 'on' : 'off'; }
+      if (t.dataset.cn){ const c = Views.readCourseForm(), n = +t.value; while (c.holes.length < n) c.holes.push({ par: 4, yards: null, si: null }); c.holes.length = n; Views.courseForm(c); return; }
+      if (t.id === 'imp-file' && t.files && t.files[0]){ const f = t.files[0]; f.text().then(txt => { let o; try { o = JSON.parse(txt); } catch (_){ return UI.toast('That file is not a Shot Lab backup.'); } if (!o || (typeof o.rounds !== 'object' && typeof o.courses !== 'object')) return UI.toast('That file is not a Shot Lab backup.'); const before = realRounds().length; mergeData(o); saveLocal(); Cache.clear(); Sync.soon(1500); App.render(); UI.toast(`Backup merged: ${realRounds().length - before} new round(s).`); }); t.value = ''; return; }
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') UI.close(); if (e.key === 'Enter' && e.target.dataset && e.target.dataset.num){ e.target.blur(); } });
+    $('#sheet').addEventListener('click', e => { if (e.target.id === 'sheet') UI.close(); });
+    addEventListener('hashchange', () => { App.render(); window.scrollTo(0, 0); });
+    /* tooltips */
+    const tip = $('#tip');
+    const show = (el, x, y) => { tip.textContent = el.getAttribute('data-tip'); tip.classList.add('on'); const r = tip.getBoundingClientRect(); tip.style.left = clamp(x + 12, 6, innerWidth - r.width - 6) + 'px'; tip.style.top = clamp(y - r.height - 10, 6, innerHeight - r.height - 6) + 'px'; };
+    document.addEventListener('pointermove', e => { if (e.pointerType !== 'mouse') return; const el = e.target.closest && e.target.closest('[data-tip]'); if (el) show(el, e.clientX, e.clientY); else tip.classList.remove('on'); });
+    document.addEventListener('pointerdown', e => { if (e.pointerType === 'mouse') return; const el = e.target.closest && e.target.closest('[data-tip]'); if (el) show(el, e.clientX, e.clientY); else tip.classList.remove('on'); });
+    document.addEventListener('focusin', e => { const el = e.target.closest && e.target.closest('[data-tip]'); if (el){ const r = el.getBoundingClientRect(); show(el, r.left + r.width / 2, r.top); } });
+    document.addEventListener('focusout', () => tip.classList.remove('on'));
+    if (!location.hash) location.hash = St.active && St.rounds[St.active.rid] ? '#play' : '#home';
+    App.render();
+    loadDurable();
+    Sync.soon(800);
+    addEventListener('online', () => Sync.soon(1000));
+    addEventListener('offline', () => { if (Sync.on()) Sync.setState('off'); });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden'){ IDB.set('data', snapshot()); if (Sync.timer) Sync.now(); }
+      else { App.render(); if (Sync.on() && (!Sync.cfg.last || Date.now() - Sync.cfg.last > 60000)) Sync.soon(500); }
+    });
+    App.sw();
+  },
+  sw(){
+    if (!('serviceWorker' in navigator) || !(location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) return;
+    let reloading = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => { if (reloading) return; reloading = true; location.reload(); });
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      App.swReg = reg;
+      const ready = w => { App.waiting = w; const b = $('#upd'); if (b) b.hidden = false; };
+      if (reg.waiting && navigator.serviceWorker.controller) ready(reg.waiting);
+      reg.addEventListener('updatefound', () => { const w = reg.installing; if (w) w.addEventListener('statechange', () => { if (w.state === 'installed' && navigator.serviceWorker.controller) ready(w); }); });
+    }).catch(() => {});
+  }
+};
+if (typeof document !== 'undefined' && document.getElementById('view')) App.init();
+</script>
+
+</body></html>
